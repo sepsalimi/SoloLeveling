@@ -24,7 +24,9 @@
       "expo-secure-store","expo-notifications"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "tsconfigPaths": true,
+      "baseUrl": "/SoloLeveling"
     }
   }
 }
