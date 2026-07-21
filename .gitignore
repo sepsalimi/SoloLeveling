@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / Expo
+node_modules/
+.pnpm-store/
+.expo/

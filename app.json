@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Life Analytics",
+    "slug": "life-analytics",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "lifeanalytics",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Record an optional check-in note when you tap the record button."
+      }
+    },
+    "android": {
+      "permissions": ["RECORD_AUDIO", "POST_NOTIFICATIONS"],
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F1E8"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store","expo-notifications"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
