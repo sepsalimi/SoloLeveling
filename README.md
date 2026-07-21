@@ -1,4 +1,4 @@
-# Life Analytics MVP
+# Life Analytics
 
 A polished Expo React Native MVP for personal life analytics. The app helps users turn short text or voice check-ins into editable activity entries and calm analytics without passive monitoring.
 
