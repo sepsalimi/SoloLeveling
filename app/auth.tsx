@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, StyleSheet, TextInput, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { Button } from "@/components/Button";
@@ -7,7 +7,7 @@ import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { supabase } from "@/services/supabase";
-import { palette } from "@/theme/colors";
+import { Input } from "@/components/Input";
 
 export default function AuthScreen() {
   const [email, setEmail] = useState("");
@@ -19,8 +19,8 @@ export default function AuthScreen() {
       Alert.alert("Setup required", "Configure the Supabase URL and anonymous key before signing in.");
       return;
     }
-    if (!email.trim() || password.length < 6) {
-      Alert.alert("Check your details", "Enter a valid email and a password with at least six characters.");
+    if (!email.trim() || password.length < 8) {
+      Alert.alert("Check your details", "Enter a valid email and a password with at least eight characters.");
       return;
     }
     setLoading(true);
@@ -64,21 +64,19 @@ export default function AuthScreen() {
       </View>
       <Card>
         <Text variant="heading">Sign in</Text>
-        <TextInput
+        <Input
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           placeholder="Email"
-          style={styles.input}
           accessibilityLabel="Email"
         />
-        <TextInput
+        <Input
           value={password}
           onChangeText={setPassword}
           placeholder="Password"
           secureTextEntry
-          style={styles.input}
           accessibilityLabel="Password"
         />
         <Button label="Log in" icon="log-in-outline" onPress={() => authenticate("login")} disabled={loading} />
@@ -93,15 +91,6 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: { gap: 10, paddingTop: 20 },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: palette.line,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    backgroundColor: "#FFFFFF"
-  }
+  hero: { gap: 10, paddingTop: 20 }
 });
 

@@ -40,3 +40,20 @@ jobs:
 
       - name: Expo Doctor
         run: npx --yes expo-doctor@latest
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Test Row Level Security
+        run: supabase test db

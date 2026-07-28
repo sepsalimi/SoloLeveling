@@ -1,5 +1,5 @@
 // Provides the complete, compact editor used for extracted and historical activities.
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Text } from "@/components/Text";
@@ -11,6 +11,7 @@ import {
   UserPreferences
 } from "@/types/activity";
 import { palette } from "@/theme/colors";
+import { Input } from "@/components/Input";
 
 type Props = {
   entry: ActivityEntry;
@@ -39,25 +40,25 @@ export function ActivityEditor({ entry, preferences, selected, onChange, onDelet
       </View>
 
       <Field label="Title">
-        <TextInput value={entry.title} onChangeText={(title) => update({ title })} style={styles.input} accessibilityLabel="Activity title" />
+        <Input value={entry.title} onChangeText={(title) => update({ title })} accessibilityLabel="Activity title" />
       </Field>
       <Field label="Description">
-        <TextInput value={entry.description ?? ""} onChangeText={(description) => update({ description: description || undefined })} style={styles.input} accessibilityLabel="Activity description" />
+        <Input value={entry.description ?? ""} onChangeText={(description) => update({ description: description || undefined })} accessibilityLabel="Activity description" />
       </Field>
       <View style={styles.row}>
         <Field label="Date" style={styles.fill}>
-          <TextInput value={entry.activityDate} onChangeText={(activityDate) => update({ activityDate })} style={styles.input} accessibilityLabel="Activity date" />
+          <Input value={entry.activityDate} onChangeText={(activityDate) => update({ activityDate })} accessibilityLabel="Activity date" />
         </Field>
         <Field label="Minutes" style={styles.small}>
-          <TextInput value={String(entry.durationMinutes)} onChangeText={(value) => update({ durationMinutes: Number(value) || 0 })} keyboardType="numeric" style={styles.input} accessibilityLabel="Duration minutes" />
+          <Input value={String(entry.durationMinutes)} onChangeText={(value) => update({ durationMinutes: Number(value) || 0 })} keyboardType="numeric" accessibilityLabel="Duration minutes" />
         </Field>
       </View>
       <View style={styles.row}>
         <Field label="Start" style={styles.fill}>
-          <TextInput value={entry.startTime ?? ""} onChangeText={(startTime) => update({ startTime: startTime || undefined })} placeholder="09:00" style={styles.input} accessibilityLabel="Start time" />
+          <Input value={entry.startTime ?? ""} onChangeText={(startTime) => update({ startTime: startTime || undefined })} placeholder="09:00" accessibilityLabel="Start time" />
         </Field>
         <Field label="End" style={styles.fill}>
-          <TextInput value={entry.endTime ?? ""} onChangeText={(endTime) => update({ endTime: endTime || undefined })} placeholder="11:00" style={styles.input} accessibilityLabel="End time" />
+          <Input value={entry.endTime ?? ""} onChangeText={(endTime) => update({ endTime: endTime || undefined })} placeholder="11:00" accessibilityLabel="End time" />
         </Field>
       </View>
 
@@ -88,11 +89,10 @@ export function ActivityEditor({ entry, preferences, selected, onChange, onDelet
 
       {preferences?.efficiencyEnabled ? (
         <Field label="Efficiency percent (optional)">
-          <TextInput
+          <Input
             value={entry.efficiencyPercent == null ? "" : String(entry.efficiencyPercent)}
             onChangeText={(value) => update({ efficiencyPercent: value ? Number(value) : undefined })}
             keyboardType="numeric"
-            style={styles.input}
             accessibilityLabel="Efficiency percent"
           />
         </Field>
@@ -100,10 +100,10 @@ export function ActivityEditor({ entry, preferences, selected, onChange, onDelet
       {preferences?.moodEnabled ? (
         <View style={styles.row}>
           <Field label="Mood 1–5" style={styles.fill}>
-            <TextInput value={entry.mood == null ? "" : String(entry.mood)} onChangeText={(value) => update({ mood: value ? Number(value) : undefined })} keyboardType="numeric" style={styles.input} accessibilityLabel="Mood" />
+            <Input value={entry.mood == null ? "" : String(entry.mood)} onChangeText={(value) => update({ mood: value ? Number(value) : undefined })} keyboardType="numeric" accessibilityLabel="Mood" />
           </Field>
           <Field label="Energy 1–5" style={styles.fill}>
-            <TextInput value={entry.energyLevel == null ? "" : String(entry.energyLevel)} onChangeText={(value) => update({ energyLevel: value ? Number(value) : undefined })} keyboardType="numeric" style={styles.input} accessibilityLabel="Energy" />
+            <Input value={entry.energyLevel == null ? "" : String(entry.energyLevel)} onChangeText={(value) => update({ energyLevel: value ? Number(value) : undefined })} keyboardType="numeric" accessibilityLabel="Energy" />
           </Field>
         </View>
       ) : null}
@@ -163,16 +163,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 10 },
   fill: { flex: 1 },
   small: { width: 100 },
-  input: {
-    minHeight: 46,
-    borderWidth: 1,
-    borderColor: palette.line,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    backgroundColor: palette.surface,
-    color: palette.ink
-  },
   choices: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
   choice: { minHeight: 38, justifyContent: "center", borderRadius: 999, paddingHorizontal: 12, backgroundColor: "#EAF1EF" },
   choiceActive: { backgroundColor: palette.teal },

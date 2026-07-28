@@ -10,7 +10,7 @@ export default function Index() {
   const { authReady, dataReady, error, preferences, refresh, user } = useAppState();
 
   useEffect(() => {
-    if (!authReady || (user && !dataReady) || error) return;
+    if (!authReady || (user && !dataReady) || (error && user)) return;
     if (!user) router.replace("/auth");
     else if (!preferences?.onboardingCompleted) router.replace("/onboarding");
     else router.replace("/(tabs)/home");

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { ActivityCard } from "@/components/ActivityCard";
 import { ActivityEditor } from "@/components/ActivityEditor";
 import { Button } from "@/components/Button";
@@ -11,6 +11,8 @@ import { useAppState } from "@/context/AppState";
 import { ActivityEntry, activityCategories, socialContexts, purposeTags } from "@/types/activity";
 import { minutesToLabel } from "@/lib/dates";
 import { palette } from "@/theme/colors";
+import { activityEntrySchema } from "@/lib/validation";
+import { Input } from "@/components/Input";
 
 export default function HistoryScreen() {
   const { activities, deleteActivity, preferences, updateActivity } = useAppState();
@@ -38,20 +40,36 @@ export default function HistoryScreen() {
   function confirmDelete(entry: ActivityEntry) {
     Alert.alert("Delete activity?", `“${entry.title}” will be permanently removed.`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => void deleteActivity(entry.id) }
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          void deleteActivity(entry.id).catch((error) =>
+            Alert.alert("Could not delete activity", error instanceof Error ? error.message : "Try again.")
+          );
+        }
+      }
     ]);
   }
 
   async function saveEdit() {
     if (!editing) return;
-    await updateActivity({ ...editing, needsReview: false });
-    setEditing(undefined);
+    if (!activityEntrySchema.safeParse(editing).success) {
+      Alert.alert("Check this activity", "Enter a title, valid date, positive duration, and ratings within their displayed ranges.");
+      return;
+    }
+    try {
+      await updateActivity({ ...editing, needsReview: false });
+      setEditing(undefined);
+    } catch (error) {
+      Alert.alert("Could not save activity", error instanceof Error ? error.message : "Try again.");
+    }
   }
 
   return (
     <Screen>
       <Text variant="title">History</Text>
-      <TextInput value={query} onChangeText={setQuery} placeholder="Search activities" style={styles.input} accessibilityLabel="Search activities" />
+      <Input value={query} onChangeText={setQuery} placeholder="Search activities" accessibilityLabel="Search activities" />
       <Filter label="Category" values={activityCategories} selected={category} onChange={setCategory} />
       <Filter label="Social" values={socialContexts} selected={social} onChange={setSocial} />
       <Filter label="Purpose" values={purposeTags} selected={purpose} onChange={setPurpose} />
@@ -112,7 +130,6 @@ function Filter<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  input: { minHeight: 48, borderWidth: 1, borderColor: palette.line, borderRadius: 8, paddingHorizontal: 12, fontSize: 16, backgroundColor: "#FFFFFF" },
   group: { gap: 10 },
   filter: { gap: 6 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 7 },

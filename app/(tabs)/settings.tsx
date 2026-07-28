@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Switch, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, View } from "react-native";
 import { router } from "expo-router";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -11,6 +11,8 @@ import { UserPreferences } from "@/types/activity";
 import { requestNotificationPermission, syncReminders } from "@/services/reminders";
 import { shareCsvExport, shareJsonExport } from "@/services/exportData";
 import { defaultPreferences } from "@/data/sample";
+import { useCheckInDraft } from "@/context/CheckInDraft";
+import { Input } from "@/components/Input";
 
 const days = [
   { label: "Mon", value: 1 },
@@ -24,14 +26,20 @@ const days = [
 
 export default function SettingsScreen() {
   const { activities, preferences, updatePreferences, exportAllData, logOut, deleteAccount } = useAppState();
+  const { clearDraft } = useCheckInDraft();
   const [draft, setDraft] = useState<UserPreferences>(preferences ?? defaultPreferences);
   const [busy, setBusy] = useState(false);
   if (!preferences) return null;
 
   async function save(next: UserPreferences, reschedule = false) {
     setDraft(next);
-    await updatePreferences(next);
-    if (reschedule) await syncReminders(next);
+    try {
+      await updatePreferences(next);
+      if (reschedule) await syncReminders(next);
+    } catch (error) {
+      setDraft(preferences);
+      Alert.alert("Could not update settings", error instanceof Error ? error.message : "Try again.");
+    }
   }
 
   async function setNotifications(enabled: boolean) {
@@ -65,7 +73,10 @@ export default function SettingsScreen() {
         onPress: () => {
           setBusy(true);
           void deleteAccount()
-            .then(() => router.replace("/auth"))
+            .then(async () => {
+              await clearDraft();
+              router.replace("/auth");
+            })
             .catch((error) => Alert.alert("Account deletion failed", error instanceof Error ? error.message : "Try again."))
             .finally(() => setBusy(false));
         }
@@ -90,18 +101,16 @@ export default function SettingsScreen() {
       <Text variant="title">Settings</Text>
       <Card>
         <Text variant="heading">Reminders</Text>
-        <TextInput
+        <Input
           value={draft.afternoonReminderTime}
           onChangeText={(afternoonReminderTime) => setDraft({ ...draft, afternoonReminderTime })}
           onEndEditing={() => void save(draft, true)}
-          style={styles.input}
           accessibilityLabel="Afternoon reminder time"
         />
-        <TextInput
+        <Input
           value={draft.eveningReminderTime}
           onChangeText={(eveningReminderTime) => setDraft({ ...draft, eveningReminderTime })}
           onEndEditing={() => void save(draft, true)}
-          style={styles.input}
           accessibilityLabel="Evening reminder time"
         />
         <View style={styles.days}>
@@ -157,7 +166,6 @@ function Toggle({ label, value, onValueChange }: { label: string; value: boolean
 }
 
 const styles = StyleSheet.create({
-  input: { minHeight: 48, borderWidth: 1, borderColor: palette.line, borderRadius: 8, paddingHorizontal: 12, fontSize: 16 },
   days: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
   day: { minHeight: 40, justifyContent: "center", borderRadius: 999, paddingHorizontal: 12, backgroundColor: "#EAF1EF" },
   dayActive: { backgroundColor: palette.teal },

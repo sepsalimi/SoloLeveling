@@ -1,75 +1,91 @@
 # Life Analytics
 
-A polished Expo React Native MVP for personal life analytics. The app helps users turn short text or voice check-ins into editable activity entries and calm analytics without passive monitoring.
+Life Analytics is a private, nonjudgmental mobile app for turning short voice or text check-ins into editable activity timelines and useful time analytics.
 
-## What is included
+The native iOS and Android applications are the primary product. The Expo web build is supported as a secondary authenticated client.
 
-- Expo Router mobile app with light/dark mode aware UI.
-- Email/password auth screen with Supabase support and demo mode fallback.
-- Onboarding for reminder times, reminder days, efficiency tracking, mood/energy tracking, and raw audio retention.
-- Today screen with tracked time, untracked time, category breakdown, check-ins, and recent activities.
-- Text check-in extraction flow with deterministic mock mode.
-- Voice recording UI with microphone permission handling and five-minute timer guard.
-- Review flow with approve all, edit title/duration, delete, add, merge, split, retry, and save.
-- Analytics views for today, week, month, and year to date with donut, bar, and line charts.
-- History screen with search and category/social/purpose filtering.
-- Settings for reminders, notifications, tracking preferences, export, logout, privacy explanation, and delete-account guidance.
-- Supabase migration with tables, constraints, indexes, and Row Level Security.
-- Supabase Edge Function for secure OpenAI structured extraction.
-- Seed data, tests, architecture note, and roadmap.
+## Implemented MVP
 
-## Current package baseline
+- Supabase email/password registration, login, recovery, session restoration, logout, and account deletion.
+- Account-scoped Postgres persistence protected by Row Level Security.
+- Onboarding and settings for reminder schedules, optional metrics, and audio retention.
+- Foreground-only recording with pause, resume, cancel, a five-minute limit, and local retry after processing failures.
+- Authenticated OpenAI transcription and strict structured activity extraction through Supabase Edge Functions.
+- Multi-note check-in drafts with duplicate filtering and bounded transcript retention.
+- Complete activity review for title, description, date, time, duration, category, social context, purpose, efficiency, mood, and energy.
+- Selected merge and split actions, manual activity creation, history editing, and deletion.
+- Today, week, month, and year-to-date analytics with category, stacked distribution, trend, social, purpose, efficiency, focused-time, and previous-period metrics.
+- Local weekday reminders, JSON/CSV export, light/dark themes, and accessible controls.
 
-This project targets Expo SDK 57. Expo's current SDK table lists SDK 57 with React Native 0.86 and React 19.2.3, and the Expo Router SDK 57 page recommends `~57.0.4`. Supabase JS and `react-native-chart-kit` versions are pinned to current stable npm releases as of July 20, 2026.
+There is no demo mode and no shared sample account. A configured Supabase project is required.
 
-## Setup
+## Architecture
 
-1. Install dependencies:
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the client, database, Edge Function, and privacy boundaries.
+
+The production data flow is:
+
+1. The user types a note or records audio in the foreground.
+2. Audio is sent to the authenticated `transcribe-note` Edge Function.
+3. The transcript is sent to `process-check-in` using OpenAI Structured Outputs.
+4. The client validates and deduplicates the result.
+5. The user reviews the activities and saves them through one transactional Postgres function.
+6. Analytics reload from user-scoped Supabase tables.
+
+Raw audio is sent directly for transcription when retention is disabled. When retention is enabled, it is stored in a private user-scoped Storage path. Transcripts are stored only when they are no larger than 50 KB.
+
+## Prerequisites
+
+- Node.js 24
+- pnpm 11.7
+- Expo-compatible iOS or Android development environment
+- Supabase CLI and Docker for local backend tests
+- A Supabase project and OpenAI API key for hosted testing
+
+## App setup
 
 ```bash
 pnpm install
-```
-
-2. Copy environment variables:
-
-```bash
 cp .env.example .env
 ```
 
-3. Start the app:
+Set the public Supabase client values in `.env`:
+
+```dotenv
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-or-publishable-key
+```
+
+Start Expo:
 
 ```bash
 pnpm start
 ```
 
-4. Run on a device or simulator from the Expo CLI.
+The project includes `eas.json` and native identifiers for preview and production builds:
 
-Demo mode is enabled by default with `EXPO_PUBLIC_DEMO_MODE=true`, so the vertical slice works without Supabase or OpenAI keys.
+```bash
+npx eas-cli build --profile preview --platform android
+npx eas-cli build --profile preview --platform ios
+```
 
 ## Supabase setup
 
-1. Create a Supabase project.
-2. Link the local project:
+For a local backend:
+
+```bash
+supabase start
+supabase db reset
+```
+
+For a hosted project:
 
 ```bash
 supabase link --project-ref <project-ref>
-```
-
-3. Apply migrations and seed data:
-
-```bash
 supabase db push
-supabase db seed
 ```
 
-4. Deploy the Edge Function:
-
-```bash
-supabase functions deploy transcribe-note
-supabase functions deploy process-check-in
-```
-
-5. Set server-side secrets:
+Set Edge Function secrets:
 
 ```bash
 supabase secrets set OPENAI_API_KEY=<key>
@@ -77,55 +93,69 @@ supabase secrets set OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
 supabase secrets set OPENAI_EXTRACTION_MODEL=gpt-4.1-mini
 ```
 
-## Required environment variables
+Deploy every required function:
 
-Mobile app:
+```bash
+supabase functions deploy transcribe-note
+supabase functions deploy process-check-in
+supabase functions deploy delete-account
+```
 
-- `EXPO_PUBLIC_SUPABASE_URL`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-- `EXPO_PUBLIC_DEMO_MODE`
-
-Supabase Edge Function secrets:
-
-- `OPENAI_API_KEY`
-- `OPENAI_TRANSCRIPTION_MODEL`
-- `OPENAI_EXTRACTION_MODEL`
-
-Never put `OPENAI_API_KEY` in the Expo app environment.
+`supabase/config.toml` keeps JWT verification enabled for all three functions. Never add `OPENAI_API_KEY` to an Expo public environment variable.
 
 ## Testing
 
 ```bash
-pnpm test
 pnpm typecheck
 pnpm lint
+pnpm test
+npx expo-doctor
+pnpm export:web
 ```
 
-The test suite covers duration normalization, analytics calculations, duplicate detection, structured extraction validation, RLS migration checks, recording/review flow smoke tests, and a text-check-in happy path.
+`pnpm test` runs Vitest domain/service tests and Jest Expo component tests.
 
-## GitHub Pages
+Run database policy tests against local Supabase:
 
-The web app is configured for `https://sepsalimi.github.io/SoloLeveling/` with Expo's `/SoloLeveling` base path.
+```bash
+supabase test db
+```
 
-The Pages workflow exports the app in demo mode, generates a Workbox offline app shell, writes `dist/.nojekyll` so Expo's `_expo` assets are served correctly, and deploys the `dist` artifact.
+Run the native happy path against a configured development backend:
 
-To install the app:
+```bash
+TEST_EMAIL=<email> TEST_PASSWORD=<password> maestro test e2e/check-in-happy-path.yaml
+```
 
-- On iPhone or iPad, open the site in Safari, tap Share, then tap Add to Home Screen.
-- On Android, open the site in Chrome, open the browser menu, then tap Install app or Add to Home screen.
+## Web deployment
 
-The installed app launches in standalone mode and can reopen its cached app shell while offline.
+The GitHub Pages workflow builds the authenticated web client at `/SoloLeveling`. Configure these repository secrets before deployment:
 
-## Production notes
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 
-- Production voice transcription should upload audio to Supabase Storage or send a short foreground recording to `transcribe-note`, then call `process-check-in`, then delete raw audio unless the user opted into retention.
-- Do not log transcripts, audio URLs, API keys, or personal activity content.
-- The mobile app requests microphone permission only when the user starts recording.
-- Location, contacts, photos, messages, and calendar permissions are intentionally unused.
+Voice recording is primarily verified for native builds. Browser microphone behavior still depends on HTTPS and browser MediaRecorder support.
+
+## Privacy behavior
+
+- Recording begins only after the user presses Record.
+- Background recording is disabled.
+- The app requests no location, contacts, photos, messages, or calendar permissions.
+- OpenAI credentials exist only in Supabase Edge Function secrets.
+- Raw audio is not retained by default.
+- Stored audio is private and scoped by the authenticated user ID.
+- Transcript and source-segment sizes are constrained.
+- Account deletion removes retained audio and the Supabase Auth user; foreign-key cascades remove app data.
+- Pending drafts are removed when the account changes or is deleted.
 
 ## Known limitations
 
-- Voice upload/transcription is scaffolded at the UI and Edge Function boundary; demo mode uses text extraction.
-- Review editing currently supports title and duration inline. Category, social context, purpose, efficiency, mood, and energy are represented in data and cards but need richer pickers.
-- Previous-period comparison insight cards are placeholders until more persisted history exists.
-- Delete account requires a production admin endpoint to remove the auth user after `delete_user_data` clears profile data.
+- A live Supabase/OpenAI end-to-end run requires project credentials that are not stored in this repository.
+- Local pgTAP RLS tests require Docker and the Supabase CLI.
+- Pending review drafts are stored in the application sandbox so interrupted work can be recovered.
+- Account deletion spans Supabase Storage and Auth APIs, so a failed request must be retried.
+- Native store signing, screenshots, privacy labels, and release review remain deployment tasks.
+
+## Roadmap
+
+See [`docs/ROADMAP.md`](docs/ROADMAP.md). Health platforms, wearables, location, calendars, social features, subscriptions, passive monitoring, and a single “life score” remain out of scope.

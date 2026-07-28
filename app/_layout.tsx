@@ -42,9 +42,10 @@ function AuthLinkHandler() {
   useEffect(() => {
     if (!url || !supabase || handled.current === url) return;
     handled.current = url;
-    const parsed = new URL(url);
-    const hash = new URLSearchParams(parsed.hash.replace(/^#/, ""));
-    const code = parsed.searchParams.get("code");
+    const [baseUrl, fragment = ""] = url.split("#");
+    const parsed = Linking.parse(baseUrl);
+    const hash = new URLSearchParams(fragment);
+    const code = typeof parsed.queryParams?.code === "string" ? parsed.queryParams.code : null;
     const accessToken = hash.get("access_token");
     const refreshToken = hash.get("refresh_token");
 
@@ -63,8 +64,11 @@ function AuthLinkHandler() {
 
 function NotificationNavigation() {
   const response = Notifications.useLastNotificationResponse();
+  const handled = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (response?.notification.request.content.data?.route === "/(tabs)/check-in") {
+    const identifier = response?.notification.request.identifier;
+    if (identifier && identifier !== handled.current && response.notification.request.content.data?.route === "/(tabs)/check-in") {
+      handled.current = identifier;
       router.push("/(tabs)/check-in");
     }
   }, [response]);

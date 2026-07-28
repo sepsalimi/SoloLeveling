@@ -1,13 +1,13 @@
 // Lets a user finish the Supabase recovery flow inside the app.
 import { useState } from "react";
-import { Alert, StyleSheet, TextInput } from "react-native";
+import { Alert } from "react-native";
 import { router } from "expo-router";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { supabase } from "@/services/supabase";
-import { palette } from "@/theme/colors";
+import { Input } from "@/components/Input";
 
 export default function ResetPasswordScreen() {
   const [password, setPassword] = useState("");
@@ -35,12 +35,11 @@ export default function ResetPasswordScreen() {
     <Screen>
       <Text variant="title">Choose a new password</Text>
       <Card>
-        <TextInput
+        <Input
           value={password}
           onChangeText={setPassword}
           secureTextEntry
           placeholder="New password"
-          style={styles.input}
           accessibilityLabel="New password"
         />
         <Button label={saving ? "Saving" : "Update password"} icon="key-outline" onPress={updatePassword} disabled={saving} />
@@ -48,15 +47,3 @@ export default function ResetPasswordScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: palette.line,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    backgroundColor: palette.surface
-  }
-});

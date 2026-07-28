@@ -55,7 +55,7 @@ async function extractIntoDraft(draft: CheckInDraft, transcript: string) {
     ...draft,
     transcripts: [...draft.transcripts, transcript],
     entries: result.activities,
-    unresolvedIssues: result.unresolvedIssues,
+    unresolvedIssues: [...new Set([...draft.unresolvedIssues, ...result.unresolvedIssues])],
     transcriptRetentionNotices: stored
       ? draft.transcriptRetentionNotices
       : [...draft.transcriptRetentionNotices, "This transcript was processed but not retained because it exceeded 50 KB."]
@@ -84,7 +84,7 @@ export async function processTextCheckIn(draft: CheckInDraft, transcript: string
       .from("voice_notes")
       .update({
         processing_status: "failed",
-        processing_error: error instanceof Error ? error.message.slice(0, 500) : "Text processing failed."
+        processing_error: "EXTRACTION_FAILED"
       })
       .eq("id", note.id);
     throwIfError(failureUpdateError);
@@ -152,7 +152,7 @@ export async function processVoiceCheckIn(
       .update({
         storage_path: storagePath,
         processing_status: "failed",
-        processing_error: error instanceof Error ? error.message.slice(0, 500) : "Voice processing failed."
+        processing_error: "VOICE_PROCESSING_FAILED"
       })
       .eq("id", note.id);
     throwIfError(failureUpdateError);

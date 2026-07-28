@@ -1,4 +1,4 @@
-import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { ActivityEntry, CheckInSession, UserPreferences } from "@/types/activity";
 import {
@@ -38,11 +38,14 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [authReady, setAuthReady] = useState(!supabase);
   const [dataReady, setDataReady] = useState(!supabase);
   const [error, setError] = useState<string>();
+  const hydrateGeneration = useRef(0);
 
   const hydrate = useCallback(async (nextUser: User) => {
+    const generation = ++hydrateGeneration.current;
     setDataReady(false);
     setError(undefined);
     const data = await loadUserData(nextUser.id);
+    if (generation !== hydrateGeneration.current) return;
     setActivities(data.activities);
     setSessions(data.sessions);
     setPreferences(data.preferences);
@@ -83,6 +86,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
           setDataReady(true);
         });
       } else {
+        hydrateGeneration.current += 1;
         setActivities([]);
         setSessions([]);
         setPreferences(undefined);

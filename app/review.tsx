@@ -14,6 +14,29 @@ import { isoDate } from "@/lib/dates";
 import { activityEntrySchema } from "@/lib/validation";
 
 export default function ReviewScreen() {
+  const { draft, error, ready } = useCheckInDraft();
+  if (!ready) {
+    return (
+      <Screen>
+        <Text variant="title">Review</Text>
+        <Text>Restoring your check-in...</Text>
+      </Screen>
+    );
+  }
+  if (!draft) {
+    return (
+      <Screen>
+        <Text variant="title">Review</Text>
+        {error ? <Card><Text>{error}</Text></Card> : null}
+        <EmptyState title="No check-in to review" body="Record or type a check-in first." />
+        <Button label="Start a check-in" icon="mic-outline" onPress={() => router.replace("/(tabs)/check-in")} />
+      </Screen>
+    );
+  }
+  return <ReviewContent key={draft.sessionId} />;
+}
+
+function ReviewContent() {
   const { draft, replaceDraft, clearDraft } = useCheckInDraft();
   const { preferences, saveCheckIn } = useAppState();
   const [entries, setEntries] = useState(draft?.entries ?? []);
@@ -91,15 +114,7 @@ export default function ReviewScreen() {
     }
   }
 
-  if (!draft) {
-    return (
-      <Screen>
-        <Text variant="title">Review</Text>
-        <EmptyState title="No check-in to review" body="Record or type a check-in first." />
-        <Button label="Start a check-in" icon="mic-outline" onPress={() => router.replace("/(tabs)/check-in")} />
-      </Screen>
-    );
-  }
+  if (!draft) return null;
 
   return (
     <Screen>

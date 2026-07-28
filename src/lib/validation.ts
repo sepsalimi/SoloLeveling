@@ -16,7 +16,7 @@ export const activityEntrySchema = z.object({
   energyLevel: z.number().int().min(1).max(5).nullish().transform((value) => value ?? undefined),
   mood: z.number().int().min(1).max(5).nullish().transform((value) => value ?? undefined),
   confidence: z.number().min(0).max(1),
-  sourceTranscriptSegment: z.string().nullish().transform((value) => value ?? undefined),
+  sourceTranscriptSegment: z.string().max(2000).nullish().transform((value) => value ?? undefined),
   needsReview: z.boolean()
 });
 

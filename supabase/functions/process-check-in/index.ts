@@ -25,15 +25,15 @@ const schema = {
             activityDate: { type: "string" },
             startTime: { type: ["string", "null"] },
             endTime: { type: ["string", "null"] },
-            durationMinutes: { type: "integer" },
+            durationMinutes: { type: "integer", minimum: 1, maximum: 1440 },
             primaryCategory: { enum: ["work", "learning", "health", "exercise", "food", "chores", "social", "entertainment", "rest", "travel", "personal_care", "other"] },
             socialContext: { enum: ["solo", "with_partner", "with_family", "with_friends", "with_coworkers", "public", "unknown"] },
             purposeTags: { type: "array", items: { enum: ["productive", "fun", "recovery", "necessary", "growth"] } },
-            efficiencyPercent: { type: ["integer", "null"] },
-            energyLevel: { type: ["integer", "null"] },
-            mood: { type: ["integer", "null"] },
-            confidence: { type: "number" },
-            sourceTranscriptSegment: { type: ["string", "null"] },
+            efficiencyPercent: { type: ["integer", "null"], minimum: 0, maximum: 100 },
+            energyLevel: { type: ["integer", "null"], minimum: 1, maximum: 5 },
+            mood: { type: ["integer", "null"], minimum: 1, maximum: 5 },
+            confidence: { type: "number", minimum: 0, maximum: 1 },
+            sourceTranscriptSegment: { type: ["string", "null"], maxLength: 2000 },
             needsReview: { type: "boolean" }
           },
           required: ["id", "title", "description", "activityDate", "startTime", "endTime", "durationMinutes", "primaryCategory", "socialContext", "purposeTags", "efficiencyPercent", "energyLevel", "mood", "confidence", "sourceTranscriptSegment", "needsReview"]
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
 
     const { transcript, existingActivities = [], activityDate = new Date().toISOString().slice(0, 10) } = await req.json();
     if (!transcript || typeof transcript !== "string") throw new Error("Missing transcript.");
-    if (new TextEncoder().encode(transcript).length > 50000) throw new Error("Transcript is too large.");
+    if (new TextEncoder().encode(transcript).length > 200000) throw new Error("Transcript is too large to process.");
     if (!Array.isArray(existingActivities) || existingActivities.length > 100) throw new Error("Invalid existing activities.");
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {

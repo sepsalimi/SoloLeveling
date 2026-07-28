@@ -135,20 +135,30 @@ export async function saveUserPreferences(userId: string, preferences: UserPrefe
 }
 
 export async function completeCheckIn(userId: string, sessionId: string, entries: ActivityEntry[]) {
-  const db = client();
-  const { error: deleteError } = await db.from("activity_entries").delete().eq("session_id", sessionId);
-  throwIfError(deleteError);
-
-  const { error: insertError } = await db
-    .from("activity_entries")
-    .insert(entries.map((entry) => toDatabaseActivity({ ...entry, needsReview: false }, userId, sessionId)));
-  throwIfError(insertError);
-
-  const { error: sessionError } = await db
-    .from("check_in_sessions")
-    .update({ status: "completed", completed_at: new Date().toISOString() })
-    .eq("id", sessionId);
-  throwIfError(sessionError);
+  const reviewedEntries = entries.map((entry) => {
+    const row = toDatabaseActivity({ ...entry, needsReview: false }, userId, sessionId);
+    return {
+      activity_date: row.activity_date,
+      title: row.title,
+      description: row.description,
+      start_time: row.start_time,
+      end_time: row.end_time,
+      duration_minutes: row.duration_minutes,
+      primary_category: row.primary_category,
+      social_context: row.social_context,
+      purpose_tags: row.purpose_tags,
+      efficiency_percent: row.efficiency_percent,
+      energy_level: row.energy_level,
+      mood: row.mood,
+      confidence: row.confidence,
+      source_transcript_segment: row.source_transcript_segment
+    };
+  });
+  const { error } = await client().rpc("complete_check_in", {
+    target_session_id: sessionId,
+    reviewed_entries: reviewedEntries
+  });
+  throwIfError(error);
 }
 
 export async function updateStoredActivity(userId: string, entry: ActivityEntry) {

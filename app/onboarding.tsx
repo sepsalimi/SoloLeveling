@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Switch, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, View } from "react-native";
 import { router } from "expo-router";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -9,6 +9,7 @@ import { useAppState } from "@/context/AppState";
 import { defaultPreferences } from "@/data/sample";
 import { palette } from "@/theme/colors";
 import { requestNotificationPermission, syncReminders } from "@/services/reminders";
+import { Input } from "@/components/Input";
 
 const days = ["M", "T", "W", "T", "F", "S", "S"];
 const dayValues = [1, 2, 3, 4, 5, 6, 0];
@@ -18,15 +19,19 @@ export default function OnboardingScreen() {
   const [draft, setDraft] = useState(preferences ?? defaultPreferences);
 
   async function continueToApp() {
-    let notificationsEnabled = draft.notificationsEnabled;
-    if (notificationsEnabled && !(await requestNotificationPermission())) {
-      notificationsEnabled = false;
-      Alert.alert("Notifications are off", "You can enable reminders later in Settings.");
+    try {
+      let notificationsEnabled = draft.notificationsEnabled;
+      if (notificationsEnabled && !(await requestNotificationPermission())) {
+        notificationsEnabled = false;
+        Alert.alert("Notifications are off", "You can enable reminders later in Settings.");
+      }
+      const completed = { ...draft, notificationsEnabled, onboardingCompleted: true };
+      await updatePreferences(completed);
+      await syncReminders(completed);
+      router.replace("/(tabs)/home");
+    } catch (error) {
+      Alert.alert("Could not finish setup", error instanceof Error ? error.message : "Check your reminder times and connection.");
     }
-    const completed = { ...draft, notificationsEnabled, onboardingCompleted: true };
-    await updatePreferences(completed);
-    await syncReminders(completed);
-    router.replace("/(tabs)/home");
   }
 
   return (
@@ -34,16 +39,14 @@ export default function OnboardingScreen() {
       <Text variant="title">A lighter way to remember your day</Text>
       <Card>
         <Text variant="heading">Reminders</Text>
-        <TextInput
+        <Input
           value={draft.afternoonReminderTime}
           onChangeText={(value) => setDraft({ ...draft, afternoonReminderTime: value })}
-          style={styles.input}
           accessibilityLabel="Afternoon reminder time"
         />
-        <TextInput
+        <Input
           value={draft.eveningReminderTime}
           onChangeText={(value) => setDraft({ ...draft, eveningReminderTime: value })}
-          style={styles.input}
           accessibilityLabel="Evening reminder time"
         />
         <View style={styles.days}>
@@ -97,7 +100,6 @@ function Toggle({ label, value, onValueChange }: { label: string; value: boolean
 }
 
 const styles = StyleSheet.create({
-  input: { minHeight: 48, borderWidth: 1, borderColor: palette.line, borderRadius: 8, paddingHorizontal: 12, fontSize: 16 },
   days: { flexDirection: "row", gap: 8 },
   day: { width: 38, height: 38, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: "#EEF4F1" },
   dayActive: { backgroundColor: palette.teal },

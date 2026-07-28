@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Alert, StyleSheet, TextInput, View } from "react-native";
+import { useRef, useState } from "react";
+import { Alert, StyleSheet, View } from "react-native";
 import {
   AudioModule,
   RecordingPresets,
@@ -17,10 +17,13 @@ import { useAppState } from "@/context/AppState";
 import { useCheckInDraft } from "@/context/CheckInDraft";
 import { ensureDraft, processTextCheckIn, processVoiceCheckIn } from "@/services/checkInService";
 import { palette } from "@/theme/colors";
+import { Input } from "@/components/Input";
 
 export default function CheckInScreen() {
   const { user, preferences } = useAppState();
-  const { draft, replaceDraft } = useCheckInDraft();
+  const { draft, error: draftError, replaceDraft } = useCheckInDraft();
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const [text, setText] = useState("");
   const [processing, setProcessing] = useState(false);
   const [recordingActive, setRecordingActive] = useState(false);
@@ -30,19 +33,27 @@ export default function CheckInScreen() {
   const duration = Math.min(Math.floor(recorderState.durationMillis / 1000), 300);
 
   async function startRecording() {
-    if (!user) throw new Error("Sign in before recording.");
-    const permission = await AudioModule.requestRecordingPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Microphone permission denied", "You can still use the text check-in field.");
+    if (!user) {
+      Alert.alert("Sign in required", "Sign in before recording a check-in.");
       return;
     }
-    const activeDraft = await ensureDraft(user.id, draft);
-    await replaceDraft(activeDraft);
-    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, shouldPlayInBackground: false });
-    await recorder.prepareToRecordAsync();
-    recorder.record({ forDuration: 300 });
-    setPaused(false);
-    setRecordingActive(true);
+    try {
+      const permission = await AudioModule.requestRecordingPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Microphone permission denied", "You can still use the text check-in field.");
+        return;
+      }
+      const activeDraft = await ensureDraft(user.id, draftRef.current);
+      draftRef.current = activeDraft;
+      await replaceDraft(activeDraft);
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, shouldPlayInBackground: false });
+      await recorder.prepareToRecordAsync();
+      recorder.record({ forDuration: 300 });
+      setPaused(false);
+      setRecordingActive(true);
+    } catch (error) {
+      Alert.alert("Could not start recording", error instanceof Error ? error.message : "Try again.");
+    }
   }
 
   async function finishRecording() {
@@ -56,17 +67,19 @@ export default function CheckInScreen() {
       return;
     }
 
-    const activeDraft = await ensureDraft(user.id, draft);
+    const activeDraft = await ensureDraft(user.id, draftRef.current);
     const pendingDraft = { ...activeDraft, pendingAudioUri: uri };
+    draftRef.current = pendingDraft;
     await replaceDraft(pendingDraft);
     await processPendingVoice(pendingDraft);
   }
 
-  async function processPendingVoice(activeDraft = draft) {
+  async function processPendingVoice(activeDraft = draftRef.current) {
     if (!activeDraft?.pendingAudioUri) return;
     setProcessing(true);
     try {
       const result = await processVoiceCheckIn(activeDraft, activeDraft.pendingAudioUri, preferences?.retainAudio ?? false);
+      draftRef.current = result;
       await replaceDraft(result);
       router.push("/review");
     } catch (error) {
@@ -99,8 +112,9 @@ export default function CheckInScreen() {
     if (!text.trim() || !user) return;
     setProcessing(true);
     try {
-      const activeDraft = await ensureDraft(user.id, draft);
+      const activeDraft = await ensureDraft(user.id, draftRef.current);
       const result = await processTextCheckIn(activeDraft, text.trim());
+      draftRef.current = result;
       await replaceDraft(result);
       setText("");
       router.push("/review");
@@ -114,6 +128,7 @@ export default function CheckInScreen() {
   return (
     <Screen>
       <Text variant="title">Check in</Text>
+      {draftError ? <Card><Text>{draftError}</Text></Card> : null}
       <Card>
         <Text variant="heading">Voice note</Text>
         <View style={styles.recordCircle}>
@@ -129,7 +144,7 @@ export default function CheckInScreen() {
       </Card>
       <Card>
         <Text variant="heading">Text alternative</Text>
-        <TextInput
+        <Input
           value={text}
           onChangeText={setText}
           multiline
@@ -157,6 +172,6 @@ const styles = StyleSheet.create({
     borderColor: palette.mint
   },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  textArea: { minHeight: 144, borderWidth: 1, borderColor: palette.line, borderRadius: 8, padding: 12, fontSize: 16, textAlignVertical: "top" }
+  textArea: { minHeight: 144, paddingVertical: 12, textAlignVertical: "top" }
 });
 
