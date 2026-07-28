@@ -8,6 +8,12 @@ module.exports = [
   },
   ...expoConfig,
   {
+    files: ["supabase/functions/**/*.ts"],
+    rules: {
+      "import/no-unresolved": "off"
+    }
+  },
+  {
     files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       parser: tsParser
