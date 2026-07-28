@@ -1,5 +1,6 @@
 // Verifies that review fields emit complete activity edits.
 import { fireEvent, render } from "@testing-library/react-native";
+import { jest } from "@jest/globals";
 import { ActivityEditor } from "@/components/ActivityEditor";
 import { defaultPreferences, sampleActivities } from "@/data/sample";
 

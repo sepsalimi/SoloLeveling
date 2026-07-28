@@ -32,6 +32,7 @@ async function createSession(userId: string) {
     .select("id")
     .single();
   throwIfError(error);
+  if (!data) throw new Error("The check-in session was not created.");
   return data.id as string;
 }
 
@@ -73,6 +74,7 @@ export async function processTextCheckIn(draft: CheckInDraft, transcript: string
     .select("id")
     .single();
   throwIfError(noteError);
+  if (!note) throw new Error("The text note was not created.");
 
   let nextDraft: CheckInDraft;
   try {
@@ -123,6 +125,7 @@ export async function processVoiceCheckIn(
     .select("id")
     .single();
   throwIfError(noteError);
+  if (!note) throw new Error("The voice note was not created.");
 
   let storagePath: string | null = null;
   if (retainAudio) {

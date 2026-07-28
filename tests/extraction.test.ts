@@ -1,11 +1,11 @@
 // Verifies the authenticated production extraction boundary and OpenAI-shaped nullable output.
+import { extractActivities } from "@/services/extraction";
+
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
 
 vi.mock("@/services/supabase", () => ({
   supabase: { functions: { invoke } }
 }));
-
-import { extractActivities } from "@/services/extraction";
 
 describe("production extraction", () => {
   it("normalizes nullable Structured Output fields", async () => {

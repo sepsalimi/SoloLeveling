@@ -37,7 +37,7 @@ export default function RootLayout() {
 
 function AuthLinkHandler() {
   const url = Linking.useURL();
-  const handled = useRef<string>();
+  const handled = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!url || !supabase || handled.current === url) return;
@@ -64,7 +64,7 @@ function AuthLinkHandler() {
 function NotificationNavigation() {
   const response = Notifications.useLastNotificationResponse();
   useEffect(() => {
-    if (response?.notification.request.content.data.route === "/(tabs)/check-in") {
+    if (response?.notification.request.content.data?.route === "/(tabs)/check-in") {
       router.push("/(tabs)/check-in");
     }
   }, [response]);

@@ -1,7 +1,7 @@
 // Verifies the text check-in path reaches extraction and preserves the review draft.
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { jest } from "@jest/globals";
 import CheckInScreen from "../../app/(tabs)/check-in";
-import { defaultPreferences } from "@/data/sample";
 
 const mockReplaceDraft = jest.fn();
 const mockProcessTextCheckIn = jest.fn();
@@ -28,7 +28,7 @@ jest.mock("expo-audio", () => ({
 jest.mock("@/context/AppState", () => ({
   useAppState: () => ({
     user: { id: "user-1" },
-    preferences: defaultPreferences
+    preferences: require("@/data/sample").defaultPreferences
   })
 }));
 
@@ -47,7 +47,7 @@ jest.mock("@/context/CheckInDraft", () => ({
 }));
 
 jest.mock("@/services/checkInService", () => ({
-  ensureDraft: jest.fn(async (_userId, draft) => draft),
+  ensureDraft: jest.fn(async (_userId: string, draft: unknown) => draft),
   processTextCheckIn: (...args: unknown[]) => mockProcessTextCheckIn(...args),
   processVoiceCheckIn: jest.fn()
 }));

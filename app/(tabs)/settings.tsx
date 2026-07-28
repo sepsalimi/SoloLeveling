@@ -10,6 +10,7 @@ import { palette } from "@/theme/colors";
 import { UserPreferences } from "@/types/activity";
 import { requestNotificationPermission, syncReminders } from "@/services/reminders";
 import { shareCsvExport, shareJsonExport } from "@/services/exportData";
+import { defaultPreferences } from "@/data/sample";
 
 const days = [
   { label: "Mon", value: 1 },
@@ -23,10 +24,9 @@ const days = [
 
 export default function SettingsScreen() {
   const { activities, preferences, updatePreferences, exportAllData, logOut, deleteAccount } = useAppState();
-  const [draft, setDraft] = useState(preferences);
+  const [draft, setDraft] = useState<UserPreferences>(preferences ?? defaultPreferences);
   const [busy, setBusy] = useState(false);
   if (!preferences) return null;
-  if (!draft) return null;
 
   async function save(next: UserPreferences, reschedule = false) {
     setDraft(next);
