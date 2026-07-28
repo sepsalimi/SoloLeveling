@@ -76,7 +76,8 @@ describe("CheckInScreen", () => {
     fireEvent.press(getByText("Extract activities"));
 
     await waitFor(() => expect(mockProcessTextCheckIn).toHaveBeenCalledWith(expect.anything(), "Worked for one hour"));
-    expect(mockReplaceDraft).toHaveBeenCalled();
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/review"));
+    await waitFor(() =>
+      expect(mockReplaceDraft).toHaveBeenCalledWith(expect.objectContaining({ transcripts: ["Worked for one hour"] }))
+    );
   });
 });
