@@ -104,7 +104,11 @@ function ReviewContent() {
     }
     setSaving(true);
     try {
-      await saveCheckIn(draft.sessionId, entries.map((entry) => ({ ...entry, needsReview: false })));
+      await saveCheckIn(
+        draft.sessionId,
+        entries.map((entry) => ({ ...entry, needsReview: false })),
+        draft.transcripts
+      );
       await clearDraft();
       router.replace("/(tabs)/home");
     } catch (error) {

@@ -35,11 +35,13 @@ function weeklyTrigger(day: number, time: { hour: number; minute: number }) {
 }
 
 export async function requestNotificationPermission() {
+  if (Platform.OS === "web") return false;
   const permission = await Notifications.requestPermissionsAsync();
   return permission.granted;
 }
 
 export async function syncReminders(preferences: UserPreferences) {
+  if (Platform.OS === "web") return;
   await Notifications.cancelAllScheduledNotificationsAsync();
   if (!preferences.notificationsEnabled) return;
 

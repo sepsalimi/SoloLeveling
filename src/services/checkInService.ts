@@ -4,6 +4,8 @@ import { isoDate } from "@/lib/dates";
 import { extractActivities } from "@/services/extraction";
 import { supabase } from "@/services/supabase";
 import { ActivityEntry, CheckInDraft } from "@/types/activity";
+import { isLocalMode } from "@/services/runtime";
+import { extractLocalActivities } from "@/services/localExtraction";
 
 const transcriptStorageLimit = 50_000;
 
@@ -40,7 +42,7 @@ export async function ensureDraft(userId: string, draft: CheckInDraft | null): P
   if (draft?.userId === userId) return draft;
   return {
     userId,
-    sessionId: await createSession(userId),
+    sessionId: isLocalMode ? `local-session-${Date.now()}` : await createSession(userId),
     transcripts: [],
     entries: [],
     unresolvedIssues: [],
@@ -63,6 +65,19 @@ async function extractIntoDraft(draft: CheckInDraft, transcript: string) {
 }
 
 export async function processTextCheckIn(draft: CheckInDraft, transcript: string): Promise<CheckInDraft> {
+  if (isLocalMode) {
+    const result = await extractLocalActivities(transcript, draft.entries);
+    const stored = retainedTranscript(transcript);
+    return {
+      ...draft,
+      transcripts: stored ? [...draft.transcripts, transcript] : draft.transcripts,
+      entries: result.activities,
+      unresolvedIssues: [...new Set([...draft.unresolvedIssues, ...result.unresolvedIssues])],
+      transcriptRetentionNotices: stored
+        ? draft.transcriptRetentionNotices
+        : [...draft.transcriptRetentionNotices, "This transcript was processed but not retained because it exceeded 50 KB."]
+    };
+  }
   const db = client();
   const { data: note, error: noteError } = await db
     .from("voice_notes")
@@ -113,6 +128,9 @@ export async function processVoiceCheckIn(
   audioUri: string,
   retainAudio: boolean
 ): Promise<CheckInDraft> {
+  if (isLocalMode) {
+    throw new Error("Voice transcription requires the private backend. Use the text check-in while local mode is active.");
+  }
   const db = client();
   const file = new File(audioUri);
   const { data: note, error: noteError } = await db

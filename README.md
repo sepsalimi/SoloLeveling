@@ -17,7 +17,7 @@ The native iOS and Android applications are the primary product. The Expo web bu
 - Today, week, month, and year-to-date analytics with category, stacked distribution, trend, social, purpose, efficiency, focused-time, and previous-period metrics.
 - Local weekday reminders, JSON/CSV export, light/dark themes, and accessible controls.
 
-There is no demo mode and no shared sample account. A configured Supabase project is required.
+There is no shared sample account. Production mode uses Supabase. The temporary GitHub Pages build uses an explicit local-only mode with empty device-local data and deterministic text extraction.
 
 ## Architecture
 
@@ -54,6 +54,7 @@ Set the public Supabase client values in `.env`:
 ```dotenv
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-or-publishable-key
+EXPO_PUBLIC_LOCAL_MODE=false
 ```
 
 Start Expo:
@@ -129,12 +130,9 @@ TEST_EMAIL=<email> TEST_PASSWORD=<password> maestro test e2e/check-in-happy-path
 
 ## Web deployment
 
-The GitHub Pages workflow builds the authenticated web client at `/SoloLeveling`. Configure these repository secrets before deployment:
+The GitHub Pages workflow currently builds `/SoloLeveling` with `EXPO_PUBLIC_LOCAL_MODE=true`. It requires no account or backend, stores data in that browser, and uses transparent rule-based text extraction.
 
-- `EXPO_PUBLIC_SUPABASE_URL`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-
-Voice recording is primarily verified for native builds. Browser microphone behavior still depends on HTTPS and browser MediaRecorder support.
+Voice transcription is disabled in local mode because it cannot be implemented securely without a server-side API key. Change the workflow to production environment variables when Supabase is ready.
 
 ## Privacy behavior
 

@@ -2,7 +2,9 @@
 
 ## Product boundary
 
-Life Analytics is a native-first Expo application. It records only while its recording screen is active and stores production account data in Supabase. There is no client-side OpenAI key or demo data path.
+Life Analytics is a native-first Expo application. It records only while its recording screen is active and stores production account data in Supabase. There is no client-side OpenAI key.
+
+The temporary GitHub Pages deployment enables `EXPO_PUBLIC_LOCAL_MODE=true`. This explicit runtime has no account or sample data, persists only in the current browser, uses deterministic text extraction, and disables voice transcription.
 
 ## Client
 
@@ -15,7 +17,7 @@ Expo Router owns navigation:
 - `home`, `analytics`, and `history` query the hydrated account state.
 - `settings` manages reminders, privacy choices, export, logout, and deletion.
 
-`AppStateProvider` restores the Supabase session and hydrates activities, sessions, and preferences through `dataRepository.ts`. Supabase remains the source of truth.
+`AppStateProvider` restores the Supabase session and hydrates activities, sessions, and preferences through `dataRepository.ts`. Supabase remains the production source of truth. In temporary local mode, the same state interface uses empty AsyncStorage collections.
 
 `CheckInDraftProvider` retains one unfinished session across the recording and review routes. AsyncStorage is used only for interrupted draft recovery, never as the production activity database. Native authentication tokens use SecureStore; web tokens use browser-compatible AsyncStorage.
 

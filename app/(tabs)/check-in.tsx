@@ -20,7 +20,7 @@ import { palette } from "@/theme/colors";
 import { Input } from "@/components/Input";
 
 export default function CheckInScreen() {
-  const { user, preferences } = useAppState();
+  const { localMode, user, preferences } = useAppState();
   const { draft, error: draftError, replaceDraft } = useCheckInDraft();
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -129,19 +129,26 @@ export default function CheckInScreen() {
     <Screen>
       <Text variant="title">Check in</Text>
       {draftError ? <Card><Text>{draftError}</Text></Card> : null}
-      <Card>
-        <Text variant="heading">Voice note</Text>
-        <View style={styles.recordCircle}>
-          <Text variant="metric">{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, "0")}</Text>
-        </View>
-        <View style={styles.actions}>
-          <Button label={recordingActive ? "Finish" : "Record"} icon={recordingActive ? "stop-outline" : "mic-outline"} onPress={recordingActive ? finishRecording : startRecording} disabled={processing} />
-          <Button label={paused ? "Resume" : "Pause"} icon={paused ? "play-outline" : "pause-outline"} variant="secondary" onPress={togglePause} disabled={!recordingActive || processing} />
-          <Button label="Cancel" icon="close-outline" variant="danger" onPress={cancelRecording} disabled={!recordingActive || processing} />
-        </View>
-        {draft?.pendingAudioUri ? <Button label="Retry saved recording" icon="refresh-outline" variant="secondary" onPress={() => processPendingVoice()} disabled={processing} /> : null}
-        <Text variant="caption">Voice notes are limited to five minutes. The app never records in the background.</Text>
-      </Card>
+      {localMode ? (
+        <Card>
+          <Text variant="heading">Voice notes</Text>
+          <Text>Voice transcription will be available after the private backend is connected. No API key is exposed in this temporary local version.</Text>
+        </Card>
+      ) : (
+        <Card>
+          <Text variant="heading">Voice note</Text>
+          <View style={styles.recordCircle}>
+            <Text variant="metric">{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, "0")}</Text>
+          </View>
+          <View style={styles.actions}>
+            <Button label={recordingActive ? "Finish" : "Record"} icon={recordingActive ? "stop-outline" : "mic-outline"} onPress={recordingActive ? finishRecording : startRecording} disabled={processing} />
+            <Button label={paused ? "Resume" : "Pause"} icon={paused ? "play-outline" : "pause-outline"} variant="secondary" onPress={togglePause} disabled={!recordingActive || processing} />
+            <Button label="Cancel" icon="close-outline" variant="danger" onPress={cancelRecording} disabled={!recordingActive || processing} />
+          </View>
+          {draft?.pendingAudioUri ? <Button label="Retry saved recording" icon="refresh-outline" variant="secondary" onPress={() => processPendingVoice()} disabled={processing} /> : null}
+          <Text variant="caption">Voice notes are limited to five minutes. The app never records in the background.</Text>
+        </Card>
+      )}
       <Card>
         <Text variant="heading">Text alternative</Text>
         <Input

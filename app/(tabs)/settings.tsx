@@ -25,7 +25,7 @@ const days = [
 ];
 
 export default function SettingsScreen() {
-  const { activities, preferences, updatePreferences, exportAllData, logOut, deleteAccount } = useAppState();
+  const { activities, localMode, preferences, updatePreferences, exportAllData, logOut, deleteAccount } = useAppState();
   const { clearDraft } = useCheckInDraft();
   const [draft, setDraft] = useState<UserPreferences>(preferences ?? defaultPreferences);
   const [busy, setBusy] = useState(false);
@@ -65,17 +65,19 @@ export default function SettingsScreen() {
   }
 
   function confirmDeleteAccount() {
-    Alert.alert("Delete account permanently?", "This deletes all activities, transcripts, retained audio, and your login. This cannot be undone.", [
+    Alert.alert(localMode ? "Clear all local data?" : "Delete account permanently?", localMode
+      ? "This deletes all activities and preferences stored in this browser. This cannot be undone."
+      : "This deletes all activities, transcripts, retained audio, and your login. This cannot be undone.", [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Delete permanently",
+        text: localMode ? "Clear data" : "Delete permanently",
         style: "destructive",
         onPress: () => {
           setBusy(true);
           void deleteAccount()
             .then(async () => {
               await clearDraft();
-              router.replace("/auth");
+              router.replace(localMode ? "/onboarding" : "/auth");
             })
             .catch((error) => Alert.alert("Account deletion failed", error instanceof Error ? error.message : "Try again."))
             .finally(() => setBusy(false));
@@ -145,13 +147,14 @@ export default function SettingsScreen() {
       <Card>
         <Text variant="heading">Privacy</Text>
         <Text>
-          OpenAI transcription and extraction happen through Supabase Edge Functions. The mobile app never contains an OpenAI API key and
-          does not log transcripts, audio URLs, or personal activity content. Transcripts over 50 KB are processed but not retained.
+          {localMode
+            ? "This temporary version keeps your data only in this browser. Text extraction runs locally and no activity content is sent to an AI service."
+            : "OpenAI transcription and extraction happen through Supabase Edge Functions. The mobile app never contains an OpenAI API key and does not log transcripts, audio URLs, or personal activity content. Transcripts over 50 KB are processed but not retained."}
         </Text>
       </Card>
       <Button label="Export data" icon="download-outline" onPress={chooseExport} disabled={busy} />
-      <Button label="Delete account" icon="warning-outline" variant="danger" onPress={confirmDeleteAccount} disabled={busy} />
-      <Button label="Log out" icon="log-out-outline" variant="ghost" onPress={handleLogOut} disabled={busy} />
+      <Button label={localMode ? "Clear local data" : "Delete account"} icon="warning-outline" variant="danger" onPress={confirmDeleteAccount} disabled={busy} />
+      {!localMode ? <Button label="Log out" icon="log-out-outline" variant="ghost" onPress={handleLogOut} disabled={busy} /> : null}
     </Screen>
   );
 }
