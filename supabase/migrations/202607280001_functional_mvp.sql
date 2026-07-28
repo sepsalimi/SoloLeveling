@@ -65,6 +65,12 @@ select id
 from auth.users
 on conflict (user_id) do nothing;
 
+grant select, insert, update, delete on table public.profiles to authenticated;
+grant select, insert, update, delete on table public.user_preferences to authenticated;
+grant select, insert, update, delete on table public.check_in_sessions to authenticated;
+grant select, insert, update, delete on table public.voice_notes to authenticated;
+grant select, insert, update, delete on table public.activity_entries to authenticated;
+
 insert into storage.buckets (id, name, public)
 values ('voice-notes', 'voice-notes', false)
 on conflict (id) do update set public = false;
