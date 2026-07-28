@@ -74,7 +74,20 @@ export async function processTextCheckIn(draft: CheckInDraft, transcript: string
     .single();
   throwIfError(noteError);
 
-  const nextDraft = await extractIntoDraft(draft, transcript);
+  let nextDraft: CheckInDraft;
+  try {
+    nextDraft = await extractIntoDraft(draft, transcript);
+  } catch (error) {
+    const { error: failureUpdateError } = await db
+      .from("voice_notes")
+      .update({
+        processing_status: "failed",
+        processing_error: error instanceof Error ? error.message.slice(0, 500) : "Text processing failed."
+      })
+      .eq("id", note.id);
+    throwIfError(failureUpdateError);
+    throw error;
+  }
   const { error: updateError } = await db
     .from("voice_notes")
     .update({
@@ -120,13 +133,28 @@ export async function processVoiceCheckIn(
     throwIfError(uploadError);
   }
 
-  const form = new FormData();
-  form.append("file", file);
-  const { data: transcription, error: transcriptionError } = await db.functions.invoke("transcribe-note", { body: form });
-  throwIfError(transcriptionError);
-  if (!transcription?.transcript) throw new Error("The transcription was empty.");
-
-  const nextDraft = await extractIntoDraft(draft, transcription.transcript);
+  let transcription: { transcript?: string };
+  let nextDraft: CheckInDraft;
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const result = await db.functions.invoke("transcribe-note", { body: form });
+    throwIfError(result.error);
+    transcription = result.data;
+    if (!transcription?.transcript) throw new Error("The transcription was empty.");
+    nextDraft = await extractIntoDraft(draft, transcription.transcript);
+  } catch (error) {
+    const { error: failureUpdateError } = await db
+      .from("voice_notes")
+      .update({
+        storage_path: storagePath,
+        processing_status: "failed",
+        processing_error: error instanceof Error ? error.message.slice(0, 500) : "Voice processing failed."
+      })
+      .eq("id", note.id);
+    throwIfError(failureUpdateError);
+    throw error;
+  }
   const { error: updateError } = await db
     .from("voice_notes")
     .update({

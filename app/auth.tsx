@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Alert, StyleSheet, TextInput, View } from "react-native";
 import { router } from "expo-router";
+import * as Linking from "expo-linking";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
@@ -26,7 +27,14 @@ export default function AuthScreen() {
     const response =
       mode === "login"
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+        : await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: Linking.createURL("/"),
+              data: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
+            }
+          });
     setLoading(false);
     if (response.error) {
       Alert.alert("Authentication failed", response.error.message);
@@ -42,7 +50,9 @@ export default function AuthScreen() {
       Alert.alert("Demo mode", "Password reset is available once Supabase environment variables are configured.");
       return;
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: Linking.createURL("/reset-password")
+    });
     Alert.alert(error ? "Password reset failed" : "Check your email", error?.message ?? "A reset link has been sent.");
   }
 

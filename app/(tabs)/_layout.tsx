@@ -1,14 +1,31 @@
+import { useEffect } from "react";
+import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "@/theme/colors";
+import { useAppState } from "@/context/AppState";
 
 export default function TabsLayout() {
+  const { authReady, user } = useAppState();
+  const dark = useColorScheme() === "dark";
+
+  useEffect(() => {
+    if (authReady && !user) router.replace("/auth");
+  }, [authReady, user]);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: palette.teal,
-        tabBarStyle: { minHeight: 64, paddingTop: 6 }
+        tabBarInactiveTintColor: dark ? palette.darkMuted : palette.muted,
+        tabBarStyle: {
+          minHeight: 64,
+          paddingTop: 6,
+          backgroundColor: dark ? palette.surfaceDark : palette.surface,
+          borderTopColor: dark ? palette.darkLine : palette.line
+        }
       }}
     >
       <Tabs.Screen name="home" options={{ title: "Today", tabBarIcon: ({ color }) => <Ionicons name="today-outline" size={22} color={color} /> }} />

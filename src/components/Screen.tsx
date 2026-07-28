@@ -24,6 +24,6 @@ export function Screen({ children, scroll = true }: PropsWithChildren<{ scroll?:
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { flexGrow: 1 },
-  content: { flex: 1, padding: 20, gap: 16 }
+  content: { flex: 1, width: "100%", maxWidth: 760, alignSelf: "center", padding: 20, gap: 16 }
 });
 

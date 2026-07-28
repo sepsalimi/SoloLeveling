@@ -1,46 +1,69 @@
 import { useMemo, useState } from "react";
-import { StyleSheet, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { ActivityCard } from "@/components/ActivityCard";
+import { ActivityEditor } from "@/components/ActivityEditor";
+import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
-import { activityCategories, socialContexts, purposeTags } from "@/types/activity";
+import { ActivityEntry, activityCategories, socialContexts, purposeTags } from "@/types/activity";
 import { minutesToLabel } from "@/lib/dates";
 import { palette } from "@/theme/colors";
 
 export default function HistoryScreen() {
-  const { activities, deleteActivity } = useAppState();
+  const { activities, deleteActivity, preferences, updateActivity } = useAppState();
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("");
+  const [category, setCategory] = useState("all");
+  const [social, setSocial] = useState("all");
+  const [purpose, setPurpose] = useState("all");
+  const [editing, setEditing] = useState<ActivityEntry>();
   const filtered = useMemo(
     () =>
       activities.filter((entry) => {
-        const haystack = `${entry.title} ${entry.primaryCategory} ${entry.socialContext} ${entry.purposeTags.join(" ")}`.toLowerCase();
-        return haystack.includes(query.toLowerCase()) && (!filter || haystack.includes(filter));
+        const textMatches = `${entry.title} ${entry.description ?? ""}`.toLowerCase().includes(query.toLowerCase());
+        return textMatches
+          && (category === "all" || entry.primaryCategory === category)
+          && (social === "all" || entry.socialContext === social)
+          && (purpose === "all" || entry.purposeTags.includes(purpose as ActivityEntry["purposeTags"][number]));
       }),
-    [activities, filter, query]
+    [activities, category, purpose, query, social]
   );
   const grouped = filtered.reduce<Record<string, typeof filtered>>((acc, entry) => {
     acc[entry.activityDate] = [...(acc[entry.activityDate] ?? []), entry];
     return acc;
   }, {});
 
+  function confirmDelete(entry: ActivityEntry) {
+    Alert.alert("Delete activity?", `“${entry.title}” will be permanently removed.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => void deleteActivity(entry.id) }
+    ]);
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    await updateActivity({ ...editing, needsReview: false });
+    setEditing(undefined);
+  }
+
   return (
     <Screen>
       <Text variant="title">History</Text>
       <TextInput value={query} onChangeText={setQuery} placeholder="Search activities" style={styles.input} accessibilityLabel="Search activities" />
-      <TextInput
-        value={filter}
-        onChangeText={setFilter}
-        placeholder="Filter category, social context, or purpose"
-        style={styles.input}
-        accessibilityLabel="Filter activities"
-      />
-      <Text variant="caption">
-        Filters support: {activityCategories.slice(0, 4).join(", ")}, {socialContexts.slice(0, 3).join(", ")}, {purposeTags.join(", ")}
-      </Text>
+      <Filter label="Category" values={activityCategories} selected={category} onChange={setCategory} />
+      <Filter label="Social" values={socialContexts} selected={social} onChange={setSocial} />
+      <Filter label="Purpose" values={purposeTags} selected={purpose} onChange={setPurpose} />
+      {editing ? (
+        <>
+          <ActivityEditor entry={editing} preferences={preferences} onChange={setEditing} />
+          <View style={styles.actions}>
+            <Button label="Save changes" icon="save-outline" onPress={() => void saveEdit()} />
+            <Button label="Cancel" icon="close-outline" variant="ghost" onPress={() => setEditing(undefined)} />
+          </View>
+        </>
+      ) : null}
       {Object.entries(grouped).length ? (
         Object.entries(grouped).map(([date, entries]) => (
           <View key={date} style={styles.group}>
@@ -49,7 +72,7 @@ export default function HistoryScreen() {
               <Text variant="caption">{minutesToLabel(entries.reduce((sum, entry) => sum + entry.durationMinutes, 0))} tracked</Text>
             </Card>
             {entries.map((entry) => (
-              <ActivityCard key={entry.id} entry={entry} onDelete={deleteActivity} />
+              <ActivityCard key={entry.id} entry={entry} onEdit={setEditing} onDelete={() => confirmDelete(entry)} />
             ))}
           </View>
         ))
@@ -60,8 +83,43 @@ export default function HistoryScreen() {
   );
 }
 
+function Filter<T extends string>({
+  label,
+  values,
+  selected,
+  onChange
+}: {
+  label: string;
+  values: readonly T[];
+  selected: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <View style={styles.filter}>
+      <Text variant="caption">{label}</Text>
+      <View style={styles.chips}>
+        {["all", ...values].map((value) => {
+          const active = selected === value;
+          return (
+            <Pressable key={value} onPress={() => onChange(value)} style={[styles.chip, active && styles.chipActive]} accessibilityRole="button" accessibilityState={{ selected: active }}>
+              <Text style={active ? styles.chipTextActive : styles.chipText}>{value.replaceAll("_", " ")}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   input: { minHeight: 48, borderWidth: 1, borderColor: palette.line, borderRadius: 8, paddingHorizontal: 12, fontSize: 16, backgroundColor: "#FFFFFF" },
-  group: { gap: 10 }
+  group: { gap: 10 },
+  filter: { gap: 6 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  chip: { minHeight: 38, justifyContent: "center", borderRadius: 999, paddingHorizontal: 12, backgroundColor: "#EAF1EF" },
+  chipActive: { backgroundColor: palette.teal },
+  chipText: { color: palette.teal, fontSize: 13 },
+  chipTextActive: { color: "#FFFFFF", fontSize: 13 },
+  actions: { flexDirection: "row", gap: 8 }
 });
 

@@ -6,8 +6,11 @@ type Variant = "title" | "heading" | "body" | "caption" | "metric";
 
 export function Text({ children, style, variant = "body", ...props }: PropsWithChildren<TextProps & { variant?: Variant }>) {
   const dark = useColorScheme() === "dark";
+  const color = variant === "caption"
+    ? dark ? palette.darkMuted : palette.muted
+    : dark ? palette.darkInk : palette.ink;
   return (
-    <RNText style={[styles.base, styles[variant], { color: dark ? palette.darkInk : palette.ink }, style]} {...props}>
+    <RNText style={[styles.base, styles[variant], { color }, style]} {...props}>
       {children}
     </RNText>
   );

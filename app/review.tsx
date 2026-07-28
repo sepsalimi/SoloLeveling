@@ -1,37 +1,36 @@
-import { useMemo, useState } from "react";
-import { Alert, StyleSheet, TextInput, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
-import { ActivityCard } from "@/components/ActivityCard";
+import { useEffect, useState } from "react";
+import { Alert, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
+import { ActivityEditor } from "@/components/ActivityEditor";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
+import { useCheckInDraft } from "@/context/CheckInDraft";
 import { ActivityEntry } from "@/types/activity";
 import { isoDate } from "@/lib/dates";
-import { palette } from "@/theme/colors";
-
-type Payload = { transcript: string; entries: ActivityEntry[]; unresolvedIssues: string[] };
+import { activityEntrySchema } from "@/lib/validation";
 
 export default function ReviewScreen() {
-  const params = useLocalSearchParams<{ payload?: string }>();
-  const parsed = useMemo<Payload>(() => {
-    try {
-      return params.payload ? JSON.parse(params.payload) : { transcript: "", entries: [], unresolvedIssues: [] };
-    } catch {
-      return { transcript: "", entries: [], unresolvedIssues: ["Could not read the extraction payload."] };
-    }
-  }, [params.payload]);
-  const [entries, setEntries] = useState(parsed.entries);
-  const { upsertActivities, addSession } = useAppState();
+  const { draft, replaceDraft, clearDraft } = useCheckInDraft();
+  const { preferences, saveCheckIn } = useAppState();
+  const [entries, setEntries] = useState(draft?.entries ?? []);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
-  function updateEntry(id: string, patch: Partial<ActivityEntry>) {
-    setEntries((current) => current.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
+  useEffect(() => setEntries(draft?.entries ?? []), [draft?.sessionId]);
+
+  async function updateEntries(next: ActivityEntry[]) {
+    if (!draft) return;
+    setEntries(next);
+    await replaceDraft({ ...draft, entries: next });
   }
 
   function addManual() {
-    setEntries((current) => [
-      ...current,
+    void updateEntries([
+      ...entries,
       {
         id: `manual-${Date.now()}`,
         title: "New activity",
@@ -46,74 +45,101 @@ export default function ReviewScreen() {
     ]);
   }
 
-  function mergeFirstTwo() {
-    if (entries.length < 2) return;
-    const [a, b, ...rest] = entries;
-    setEntries([{ ...a, title: `${a.title} + ${b.title}`, durationMinutes: a.durationMinutes + b.durationMinutes, needsReview: true }, ...rest]);
+  function mergeSelected() {
+    if (selectedIds.length !== 2) return;
+    const [a, b] = selectedIds.map((id) => entries.find((entry) => entry.id === id));
+    if (!a || !b) return;
+    const merged: ActivityEntry = {
+      ...a,
+      id: `merged-${Date.now()}`,
+      title: `${a.title} + ${b.title}`,
+      durationMinutes: a.durationMinutes + b.durationMinutes,
+      purposeTags: [...new Set([...a.purposeTags, ...b.purposeTags])],
+      needsReview: true
+    };
+    void updateEntries([merged, ...entries.filter((entry) => !selectedIds.includes(entry.id))]);
+    setSelectedIds([]);
   }
 
-  function splitFirst() {
-    const first = entries[0];
-    if (!first || first.durationMinutes < 2) return;
-    const half = Math.round(first.durationMinutes / 2);
-    setEntries([
-      { ...first, id: `${first.id}-a`, title: `${first.title} part 1`, durationMinutes: half, needsReview: true },
-      { ...first, id: `${first.id}-b`, title: `${first.title} part 2`, durationMinutes: first.durationMinutes - half, needsReview: true },
-      ...entries.slice(1)
-    ]);
+  function splitSelected() {
+    if (selectedIds.length !== 1) return;
+    const selected = entries.find((entry) => entry.id === selectedIds[0]);
+    if (!selected || selected.durationMinutes < 2) return;
+    const firstDuration = Math.floor(selected.durationMinutes / 2);
+    const parts: ActivityEntry[] = [
+      { ...selected, id: `${selected.id}-a-${Date.now()}`, title: `${selected.title} part 1`, durationMinutes: firstDuration, needsReview: true },
+      { ...selected, id: `${selected.id}-b-${Date.now()}`, title: `${selected.title} part 2`, durationMinutes: selected.durationMinutes - firstDuration, needsReview: true }
+    ];
+    void updateEntries(entries.flatMap((entry) => (entry.id === selected.id ? parts : [entry])));
+    setSelectedIds([]);
   }
 
   async function save() {
-    await upsertActivities(entries.map((entry) => ({ ...entry, needsReview: false })));
-    await addSession({
-      id: `session-${Date.now()}`,
-      sessionDate: isoDate(),
-      sessionType: "manual",
-      status: "completed",
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-      transcripts: [parsed.transcript],
-      entries,
-      unresolvedIssues: parsed.unresolvedIssues
-    });
-    router.replace("/(tabs)/home");
+    if (!draft) return;
+    const invalid = entries.find((entry) => !activityEntrySchema.safeParse(entry).success);
+    if (invalid) {
+      Alert.alert("Review required", `Check the title, date, duration, and optional ratings for “${invalid.title || "Untitled activity"}”.`);
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveCheckIn(draft.sessionId, entries.map((entry) => ({ ...entry, needsReview: false })));
+      await clearDraft();
+      router.replace("/(tabs)/home");
+    } catch (error) {
+      Alert.alert("Could not save check-in", error instanceof Error ? error.message : "Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!draft) {
+    return (
+      <Screen>
+        <Text variant="title">Review</Text>
+        <EmptyState title="No check-in to review" body="Record or type a check-in first." />
+        <Button label="Start a check-in" icon="mic-outline" onPress={() => router.replace("/(tabs)/check-in")} />
+      </Screen>
+    );
   }
 
   return (
     <Screen>
       <Text variant="title">Review</Text>
-      {parsed.unresolvedIssues.map((issue) => (
+      <Text variant="caption">Make any useful corrections, then save. You do not need to perfect every field.</Text>
+      {[...draft.unresolvedIssues, ...draft.transcriptRetentionNotices].map((issue) => (
         <Card key={issue}>
           <Text>{issue}</Text>
         </Card>
       ))}
       <View style={styles.actions}>
-        <Button label="Approve all" icon="checkmark-done-outline" onPress={() => setEntries(entries.map((entry) => ({ ...entry, needsReview: false })))} />
+        <Button label="Approve all" icon="checkmark-done-outline" onPress={() => void updateEntries(entries.map((entry) => ({ ...entry, needsReview: false })))} />
         <Button label="Add" icon="add-outline" variant="secondary" onPress={addManual} />
-        <Button label="Merge" icon="git-merge-outline" variant="secondary" onPress={mergeFirstTwo} disabled={entries.length < 2} />
-        <Button label="Split" icon="git-branch-outline" variant="secondary" onPress={splitFirst} disabled={!entries.length} />
+        <Button label="Merge selected" icon="git-merge-outline" variant="secondary" onPress={mergeSelected} disabled={selectedIds.length !== 2} />
+        <Button label="Split selected" icon="git-branch-outline" variant="secondary" onPress={splitSelected} disabled={selectedIds.length !== 1} />
       </View>
       {entries.map((entry) => (
-        <Card key={entry.id}>
-          <TextInput value={entry.title} onChangeText={(value) => updateEntry(entry.id, { title: value })} style={styles.input} accessibilityLabel="Activity title" />
-          <TextInput
-            value={String(entry.durationMinutes)}
-            onChangeText={(value) => updateEntry(entry.id, { durationMinutes: Number(value) || 0, needsReview: true })}
-            keyboardType="numeric"
-            style={styles.input}
-            accessibilityLabel="Duration minutes"
-          />
-          <ActivityCard entry={entry} onDelete={(id) => setEntries(entries.filter((item) => item.id !== id))} />
-        </Card>
+        <ActivityEditor
+          key={entry.id}
+          entry={entry}
+          preferences={preferences}
+          selected={selectedIds.includes(entry.id)}
+          onToggleSelected={() =>
+            setSelectedIds((current) =>
+              current.includes(entry.id) ? current.filter((id) => id !== entry.id) : [...current, entry.id].slice(-2)
+            )
+          }
+          onChange={(next) => void updateEntries(entries.map((item) => (item.id === entry.id ? next : item)))}
+          onDelete={() => void updateEntries(entries.filter((item) => item.id !== entry.id))}
+        />
       ))}
-      <Button label="Save check-in" icon="save-outline" onPress={save} disabled={!entries.length} />
-      <Button label="Retry" icon="refresh-outline" variant="ghost" onPress={() => router.back()} />
+      <Button label={saving ? "Saving" : "Save check-in"} icon="save-outline" onPress={save} disabled={!entries.length || saving} />
+      <Button label="Add follow-up note" icon="add-circle-outline" variant="ghost" onPress={() => router.replace("/(tabs)/check-in")} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  input: { minHeight: 44, borderWidth: 1, borderColor: palette.line, borderRadius: 8, paddingHorizontal: 12, fontSize: 16 }
+  actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 }
 });
 

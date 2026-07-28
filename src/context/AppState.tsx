@@ -56,19 +56,34 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      const sessionUser = data.session?.user ?? null;
-      setUser(sessionUser);
-      setAuthReady(true);
-      if (sessionUser) void hydrate(sessionUser).catch((reason) => setError(reason instanceof Error ? reason.message : "Could not load account data."));
-      else setDataReady(true);
-    });
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        const sessionUser = data.session?.user ?? null;
+        setUser(sessionUser);
+        setAuthReady(true);
+        if (sessionUser) {
+          void hydrate(sessionUser).catch((reason) => {
+            setError(reason instanceof Error ? reason.message : "Could not load account data.");
+            setDataReady(true);
+          });
+        } else {
+          setDataReady(true);
+        }
+      })
+      .catch((reason) => {
+        setError(reason instanceof Error ? reason.message : "Could not restore the session.");
+        setAuthReady(true);
+        setDataReady(true);
+      });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const sessionUser = session?.user ?? null;
       setUser(sessionUser);
       if (sessionUser) {
-        void hydrate(sessionUser).catch((reason) => setError(reason instanceof Error ? reason.message : "Could not load account data."));
+        void hydrate(sessionUser).catch((reason) => {
+          setError(reason instanceof Error ? reason.message : "Could not load account data.");
+          setDataReady(true);
+        });
       } else {
         setActivities([]);
         setSessions([]);

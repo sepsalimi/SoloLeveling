@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Switch, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -8,6 +8,7 @@ import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
 import { defaultPreferences } from "@/data/sample";
 import { palette } from "@/theme/colors";
+import { requestNotificationPermission, syncReminders } from "@/services/reminders";
 
 const days = ["M", "T", "W", "T", "F", "S", "S"];
 const dayValues = [1, 2, 3, 4, 5, 6, 0];
@@ -17,7 +18,14 @@ export default function OnboardingScreen() {
   const [draft, setDraft] = useState(preferences ?? defaultPreferences);
 
   async function continueToApp() {
-    await updatePreferences(draft);
+    let notificationsEnabled = draft.notificationsEnabled;
+    if (notificationsEnabled && !(await requestNotificationPermission())) {
+      notificationsEnabled = false;
+      Alert.alert("Notifications are off", "You can enable reminders later in Settings.");
+    }
+    const completed = { ...draft, notificationsEnabled, onboardingCompleted: true };
+    await updatePreferences(completed);
+    await syncReminders(completed);
     router.replace("/(tabs)/home");
   }
 
@@ -62,6 +70,7 @@ export default function OnboardingScreen() {
         </View>
       </Card>
       <Card>
+        <Toggle label="Enable check-in reminders" value={draft.notificationsEnabled} onValueChange={(value) => setDraft({ ...draft, notificationsEnabled: value })} />
         <Toggle label="Efficiency tracking" value={draft.efficiencyEnabled} onValueChange={(value) => setDraft({ ...draft, efficiencyEnabled: value })} />
         <Toggle label="Mood and energy" value={draft.moodEnabled} onValueChange={(value) => setDraft({ ...draft, moodEnabled: value })} />
         <Toggle label="Retain raw audio" value={draft.retainAudio} onValueChange={(value) => setDraft({ ...draft, retainAudio: value })} />

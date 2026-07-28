@@ -1,4 +1,4 @@
-import { Pressable, StyleProp, StyleSheet, TextStyle, ViewStyle } from "react-native";
+import { Pressable, StyleProp, StyleSheet, TextStyle, useColorScheme, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Text } from "@/components/Text";
 import { palette } from "@/theme/colors";
@@ -14,10 +14,13 @@ type Props = {
 
 export function Button({ label, icon, variant = "primary", onPress, disabled, style }: Props) {
   const isPrimary = variant === "primary";
+  const dark = useColorScheme() === "dark";
+  const foreground = isPrimary ? "#FFFFFF" : variant === "danger" ? "#9A2E2E" : dark ? palette.mint : palette.teal;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
@@ -28,8 +31,8 @@ export function Button({ label, icon, variant = "primary", onPress, disabled, st
         style
       ]}
     >
-      {icon ? <Ionicons name={icon} size={20} color={isPrimary ? "#FFFFFF" : palette.teal} /> : null}
-      <Text style={[styles.label, { color: isPrimary ? "#FFFFFF" : variant === "danger" ? "#9A2E2E" : palette.teal }]}>{label}</Text>
+      {icon ? <Ionicons name={icon} size={20} color={foreground} /> : null}
+      <Text style={[styles.label, { color: foreground }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -48,7 +51,7 @@ type ButtonStyles = {
 const styles = StyleSheet.create<ButtonStyles>({
   button: {
     minHeight: 48,
-    borderRadius: 8,
+    borderRadius: 14,
     paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",

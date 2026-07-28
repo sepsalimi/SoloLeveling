@@ -20,7 +20,7 @@ export function Card({ children, style, ...props }: PropsWithChildren<ViewProps>
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 8,
+    borderRadius: 18,
     borderWidth: 1,
     padding: 16,
     gap: 10

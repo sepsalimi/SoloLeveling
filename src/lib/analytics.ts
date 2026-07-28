@@ -43,7 +43,9 @@ export function summarizeActivities(entries: ActivityEntry[], today = new Date()
     byCategory,
     byPurpose,
     soloMinutes: entries.filter((entry) => entry.socialContext === "solo").reduce((sum, entry) => sum + entry.durationMinutes, 0),
-    socialMinutes: entries.filter((entry) => entry.socialContext !== "solo").reduce((sum, entry) => sum + entry.durationMinutes, 0),
+    socialMinutes: entries
+      .filter((entry) => ["with_partner", "with_family", "with_friends", "with_coworkers"].includes(entry.socialContext))
+      .reduce((sum, entry) => sum + entry.durationMinutes, 0),
     averageEfficiency: efficiencies.length
       ? Math.round(efficiencies.reduce((sum, value) => sum + value, 0) / efficiencies.length)
       : undefined,
@@ -53,16 +55,78 @@ export function summarizeActivities(entries: ActivityEntry[], today = new Date()
 }
 
 export function filterEntriesForPeriod(entries: ActivityEntry[], period: AnalyticsPeriod, now = new Date()): ActivityEntry[] {
-  const today = isoDate(now);
-  if (period === "today") return entries.filter((entry) => sameDate(entry.activityDate, today));
+  const { start, end } = periodBounds(period, now);
+  return filterBetween(entries, start, end);
+}
 
-  const start = period === "week" ? startOfWeek(now) : period === "month" ? new Date(now.getFullYear(), now.getMonth(), 1) : new Date(now.getFullYear(), 0, 1);
-  const end = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  end.setHours(23, 59, 59, 999);
-  return entries.filter((entry) => {
-    const date = new Date(`${entry.activityDate}T12:00:00`);
-    return date >= start && date <= end;
-  });
+export function filterEntriesForPreviousPeriod(entries: ActivityEntry[], period: AnalyticsPeriod, now = new Date()) {
+  const { start, end } = previousPeriodBounds(period, now);
+  return filterBetween(entries, start, end);
+}
+
+export function trackedSeries(entries: ActivityEntry[], period: AnalyticsPeriod, now = new Date()) {
+  const { start, end } = periodBounds(period, now);
+  if (period === "ytd") {
+    const months: { date: string; minutes: number }[] = [];
+    for (let month = 0; month <= end.getMonth(); month += 1) {
+      const key = `${end.getFullYear()}-${String(month + 1).padStart(2, "0")}`;
+      months.push({
+        date: key,
+        minutes: entries
+          .filter((entry) => entry.activityDate.startsWith(key))
+          .reduce((sum, entry) => sum + entry.durationMinutes, 0)
+      });
+    }
+    return months;
+  }
+
+  const dates: { date: string; minutes: number }[] = [];
+  for (let date = new Date(start); date <= end; date = addDays(date, 1)) {
+    const key = isoDate(date);
+    dates.push({
+      date: key,
+      minutes: entries.filter((entry) => sameDate(entry.activityDate, key)).reduce((sum, entry) => sum + entry.durationMinutes, 0)
+    });
+  }
+  return dates;
+}
+
+function periodBounds(period: AnalyticsPeriod, now: Date) {
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const start =
+    period === "today"
+      ? new Date(end)
+      : period === "week"
+        ? startOfWeek(end)
+        : period === "month"
+          ? new Date(end.getFullYear(), end.getMonth(), 1)
+          : new Date(end.getFullYear(), 0, 1);
+  return { start, end };
+}
+
+function previousPeriodBounds(period: AnalyticsPeriod, now: Date) {
+  const current = periodBounds(period, now);
+  if (period === "today") {
+    const day = addDays(current.start, -1);
+    return { start: day, end: day };
+  }
+  if (period === "week") {
+    return { start: addDays(current.start, -7), end: addDays(current.end, -7) };
+  }
+  if (period === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+    return { start, end: new Date(start.getFullYear(), start.getMonth(), Math.min(now.getDate(), lastDay)) };
+  }
+  return {
+    start: new Date(now.getFullYear() - 1, 0, 1),
+    end: new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+  };
+}
+
+function filterBetween(entries: ActivityEntry[], start: Date, end: Date) {
+  const first = isoDate(start);
+  const last = isoDate(end);
+  return entries.filter((entry) => entry.activityDate >= first && entry.activityDate <= last);
 }
 
