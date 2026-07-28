@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useColorScheme } from "react-native";
-import { Tabs } from "expo-router";
-import { router } from "expo-router";
+import { router, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "@/theme/colors";
 import { useAppState } from "@/context/AppState";

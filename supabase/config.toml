@@ -1,6 +1,10 @@
 # Keeps local and deployed Edge Function authentication behavior consistent.
 project_id = "life-analytics"
 
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
 [functions.process-check-in]
 verify_jwt = true
 

@@ -35,8 +35,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [activities, setActivities] = useState<ActivityEntry[]>([]);
   const [sessions, setSessions] = useState<CheckInSession[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>();
-  const [authReady, setAuthReady] = useState(false);
-  const [dataReady, setDataReady] = useState(false);
+  const [authReady, setAuthReady] = useState(!supabase);
+  const [dataReady, setDataReady] = useState(!supabase);
   const [error, setError] = useState<string>();
 
   const hydrate = useCallback(async (nextUser: User) => {
@@ -51,8 +51,6 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!supabase) {
-      setAuthReady(true);
-      setDataReady(true);
       return;
     }
 

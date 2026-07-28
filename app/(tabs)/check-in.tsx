@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Alert, StyleSheet, TextInput, View } from "react-native";
 import {
   AudioModule,
@@ -28,10 +28,6 @@ export default function CheckInScreen() {
   const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, directory: "document" });
   const recorderState = useAudioRecorderState(recorder, 250);
   const duration = Math.min(Math.floor(recorderState.durationMillis / 1000), 300);
-
-  useEffect(() => {
-    if (recordingActive && duration >= 300 && !paused) void finishRecording();
-  }, [duration, paused, recordingActive]);
 
   async function startRecording() {
     if (!user) throw new Error("Sign in before recording.");

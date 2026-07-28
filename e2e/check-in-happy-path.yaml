@@ -1,0 +1,29 @@
+# Exercises the authenticated text check-in vertical slice against a development backend.
+appId: com.sepsalimi.lifeanalytics
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Life Analytics"
+- tapOn:
+    id: "Email"
+- inputText: "${TEST_EMAIL}"
+- tapOn:
+    id: "Password"
+- inputText: "${TEST_PASSWORD}"
+- tapOn: "Log in"
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 15000
+- tapOn: "Check in"
+- tapOn:
+    id: "Check-in text"
+- inputText: "I worked from nine to eleven at around 80 percent efficiency."
+- tapOn: "Extract activities"
+- extendedWaitUntil:
+    visible: "Review"
+    timeout: 30000
+- tapOn: "Approve all"
+- tapOn: "Save check-in"
+- extendedWaitUntil:
+    visible: "You have recorded"
+    timeout: 15000

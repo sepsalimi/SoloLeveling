@@ -14,12 +14,12 @@ type CheckInDraftValue = {
 const CheckInDraftContext = createContext<CheckInDraftValue | undefined>(undefined);
 
 export function CheckInDraftProvider({ children }: PropsWithChildren) {
-  const { user } = useAppState();
+  const { authReady, user } = useAppState();
   const [draft, setDraft] = useState<CheckInDraft | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setReady(false);
+    if (!authReady) return;
     loadCheckInDraft().then(async (stored) => {
       if (stored && stored.userId !== user?.id) {
         await clearCheckInDraft();
@@ -29,7 +29,7 @@ export function CheckInDraftProvider({ children }: PropsWithChildren) {
       }
       setReady(true);
     });
-  }, [user?.id]);
+  }, [authReady, user?.id]);
 
   const value = useMemo<CheckInDraftValue>(
     () => ({

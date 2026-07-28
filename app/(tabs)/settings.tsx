@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Switch, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { Button } from "@/components/Button";
@@ -25,7 +25,6 @@ export default function SettingsScreen() {
   const { activities, preferences, updatePreferences, exportAllData, logOut, deleteAccount } = useAppState();
   const [draft, setDraft] = useState(preferences);
   const [busy, setBusy] = useState(false);
-  useEffect(() => setDraft(preferences), [preferences]);
   if (!preferences) return null;
   if (!draft) return null;
 

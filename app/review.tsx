@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { ActivityEditor } from "@/components/ActivityEditor";
@@ -19,8 +19,6 @@ export default function ReviewScreen() {
   const [entries, setEntries] = useState(draft?.entries ?? []);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => setEntries(draft?.entries ?? []), [draft?.sessionId]);
 
   async function updateEntries(next: ActivityEntry[]) {
     if (!draft) return;

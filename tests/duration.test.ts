@@ -1,4 +1,5 @@
 import { calculateDurationFromTimes, normalizeDuration } from "@/lib/duration";
+import { transcriptFixtures } from "./fixtures/transcripts";
 
 describe("duration normalization", () => {
   it("calculates explicit time ranges", () => {
@@ -11,6 +12,10 @@ describe("duration normalization", () => {
     expect(normalizeDuration("for 2.5 hours")).toBe(150);
     expect(normalizeDuration("for 40 minutes")).toBe(40);
     expect(normalizeDuration("two and a half hours")).toBe(150);
+  });
+
+  it.each(transcriptFixtures)("normalizes the duration in %s", ({ transcript, expected }) => {
+    expect(normalizeDuration(transcript)).toBe(expected.durationMinutes);
   });
 });
 

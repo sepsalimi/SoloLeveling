@@ -7,14 +7,6 @@
     "scheme": "lifeanalytics",
     "userInterfaceStyle": "automatic",
     "icon": "./public/icons/icon-512.png",
-    "splash": {
-      "image": "./public/icons/icon-512.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F8F5EF",
-      "dark": {
-        "backgroundColor": "#0E1717"
-      }
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -45,7 +37,21 @@
       "expo-secure-store",
       "expo-notifications",
       "expo-audio",
-      "expo-font"
+      "expo-font",
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./public/icons/icon-512.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#F8F5EF",
+          "dark": {
+            "backgroundColor": "#0E1717"
+          }
+        }
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

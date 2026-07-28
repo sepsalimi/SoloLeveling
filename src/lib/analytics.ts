@@ -10,7 +10,7 @@ export type AnalyticsSummary = {
   socialMinutes: number;
   averageEfficiency?: number;
   effectiveFocusedMinutes: number;
-  dailyTracked: Array<{ date: string; minutes: number }>;
+  dailyTracked: { date: string; minutes: number }[];
 };
 
 export function effectiveFocusedMinutes(entry: ActivityEntry): number {
