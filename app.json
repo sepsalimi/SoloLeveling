@@ -7,6 +7,10 @@
     "scheme": "lifeanalytics",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": ["**/*"],
+    "web": {
+      "output": "single",
+      "favicon": "./public/icons/icon-192.png"
+    },
     "ios": {
       "supportsTablet": false,
       "infoPlist": {

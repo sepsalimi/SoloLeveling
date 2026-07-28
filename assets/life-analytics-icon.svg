@@ -1,0 +1,13 @@
+<!-- Source artwork for the Life Analytics PWA and native app icons. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#2F6F73" />
+  <circle cx="256" cy="256" r="172" fill="#F8F5EF" />
+  <rect x="142" y="290" width="48" height="78" rx="24" fill="#8BB9A9" />
+  <rect x="232" y="238" width="48" height="130" rx="24" fill="#E2B44E" />
+  <rect x="322" y="176" width="48" height="192" rx="24" fill="#C98462" />
+  <path d="M150 258L240 206L280 226L362 142" fill="none" stroke="#2F6F73" stroke-linecap="round" stroke-linejoin="round" stroke-width="24" />
+  <circle cx="150" cy="258" r="17" fill="#2F6F73" />
+  <circle cx="240" cy="206" r="17" fill="#2F6F73" />
+  <circle cx="280" cy="226" r="17" fill="#2F6F73" />
+  <circle cx="362" cy="142" r="17" fill="#2F6F73" />
+</svg>
