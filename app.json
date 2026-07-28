@@ -6,26 +6,46 @@
     "orientation": "portrait",
     "scheme": "lifeanalytics",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": ["**/*"],
+    "icon": "./public/icons/icon-512.png",
+    "splash": {
+      "image": "./public/icons/icon-512.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F8F5EF",
+      "dark": {
+        "backgroundColor": "#0E1717"
+      }
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "web": {
       "output": "single",
       "favicon": "./public/icons/icon-192.png"
     },
     "ios": {
       "supportsTablet": false,
+      "bundleIdentifier": "com.sepsalimi.lifeanalytics",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Record an optional check-in note when you tap the record button."
       }
     },
     "android": {
-      "permissions": ["RECORD_AUDIO", "POST_NOTIFICATIONS"],
+      "package": "com.sepsalimi.lifeanalytics",
+      "permissions": [
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS"
+      ],
       "adaptiveIcon": {
+        "foregroundImage": "./public/icons/icon-512.png",
         "backgroundColor": "#F7F1E8"
       }
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store","expo-notifications"
+      "expo-secure-store",
+      "expo-notifications",
+      "expo-audio",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
