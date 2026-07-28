@@ -6,11 +6,14 @@ import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
 
 export default function Index() {
-  const { ready } = useAppState();
+  const { authReady, dataReady, preferences, user } = useAppState();
 
   useEffect(() => {
-    if (ready) router.replace("/auth");
-  }, [ready]);
+    if (!authReady || (user && !dataReady)) return;
+    if (!user) router.replace("/auth");
+    else if (!preferences?.onboardingCompleted) router.replace("/onboarding");
+    else router.replace("/(tabs)/home");
+  }, [authReady, dataReady, preferences?.onboardingCompleted, user]);
 
   return (
     <Screen scroll={false}>

@@ -9,13 +9,17 @@ import { supabase } from "@/services/supabase";
 import { palette } from "@/theme/colors";
 
 export default function AuthScreen() {
-  const [email, setEmail] = useState("demo@example.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function authenticate(mode: "login" | "register") {
     if (!supabase) {
-      router.replace("/onboarding");
+      Alert.alert("Setup required", "Configure the Supabase URL and anonymous key before signing in.");
+      return;
+    }
+    if (!email.trim() || password.length < 6) {
+      Alert.alert("Check your details", "Enter a valid email and a password with at least six characters.");
       return;
     }
     setLoading(true);
@@ -24,8 +28,13 @@ export default function AuthScreen() {
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signUp({ email, password });
     setLoading(false);
-    if (response.error) Alert.alert("Authentication failed", response.error.message);
-    else router.replace("/onboarding");
+    if (response.error) {
+      Alert.alert("Authentication failed", response.error.message);
+    } else if (mode === "register" && !response.data.session) {
+      Alert.alert("Check your email", "Confirm your email address, then return here to sign in.");
+    } else {
+      router.replace("/");
+    }
   }
 
   async function resetPassword() {
@@ -67,7 +76,7 @@ export default function AuthScreen() {
         <Button label="Reset password" icon="mail-outline" variant="ghost" onPress={resetPassword} />
       </Card>
       <Text variant="caption">
-        Demo mode is enabled when Supabase keys are absent. Production OpenAI requests are handled only by the Supabase Edge Function.
+        Your account keeps activity data private with user-scoped database policies. AI requests are handled only by authenticated server functions.
       </Text>
     </Screen>
   );

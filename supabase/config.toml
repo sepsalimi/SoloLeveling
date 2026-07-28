@@ -1,0 +1,11 @@
+# Keeps local and deployed Edge Function authentication behavior consistent.
+project_id = "life-analytics"
+
+[functions.process-check-in]
+verify_jwt = true
+
+[functions.transcribe-note]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true

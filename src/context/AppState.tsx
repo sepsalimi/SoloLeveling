@@ -1,72 +1,132 @@
-import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import { ActivityEntry, CheckInSession, UserPreferences } from "@/types/activity";
 import {
-  exportData,
-  loadActivities,
-  loadPreferences,
-  loadSessions,
-  saveActivities,
-  savePreferences,
-  saveSessions
-} from "@/services/localStore";
+  completeCheckIn,
+  deleteStoredActivity,
+  loadUserData,
+  saveUserPreferences,
+  updateStoredActivity
+} from "@/services/dataRepository";
+import { isSupabaseConfigured, supabase } from "@/services/supabase";
 
 type AppStateValue = {
+  user: User | null;
   activities: ActivityEntry[];
   sessions: CheckInSession[];
   preferences?: UserPreferences;
-  ready: boolean;
-  upsertActivities: (entries: ActivityEntry[]) => Promise<void>;
+  authReady: boolean;
+  dataReady: boolean;
+  error?: string;
+  refresh: () => Promise<void>;
+  saveCheckIn: (sessionId: string, entries: ActivityEntry[]) => Promise<void>;
+  updateActivity: (entry: ActivityEntry) => Promise<void>;
   deleteActivity: (id: string) => Promise<void>;
-  addSession: (session: CheckInSession) => Promise<void>;
   updatePreferences: (preferences: UserPreferences) => Promise<void>;
   exportAllData: () => Promise<unknown>;
+  logOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 };
 
 const AppStateContext = createContext<AppStateValue | undefined>(undefined);
 
 export function AppStateProvider({ children }: PropsWithChildren) {
+  const [user, setUser] = useState<User | null>(null);
   const [activities, setActivities] = useState<ActivityEntry[]>([]);
   const [sessions, setSessions] = useState<CheckInSession[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>();
-  const [ready, setReady] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [dataReady, setDataReady] = useState(false);
+  const [error, setError] = useState<string>();
+
+  const hydrate = useCallback(async (nextUser: User) => {
+    setDataReady(false);
+    setError(undefined);
+    const data = await loadUserData(nextUser.id);
+    setActivities(data.activities);
+    setSessions(data.sessions);
+    setPreferences(data.preferences);
+    setDataReady(true);
+  }, []);
 
   useEffect(() => {
-    Promise.all([loadActivities(), loadSessions(), loadPreferences()]).then(([activityData, sessionData, preferenceData]) => {
-      setActivities(activityData);
-      setSessions(sessionData);
-      setPreferences(preferenceData);
-      setReady(true);
+    if (!supabase) {
+      setAuthReady(true);
+      setDataReady(true);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      const sessionUser = data.session?.user ?? null;
+      setUser(sessionUser);
+      setAuthReady(true);
+      if (sessionUser) void hydrate(sessionUser).catch((reason) => setError(reason instanceof Error ? reason.message : "Could not load account data."));
+      else setDataReady(true);
     });
-  }, []);
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const sessionUser = session?.user ?? null;
+      setUser(sessionUser);
+      if (sessionUser) {
+        void hydrate(sessionUser).catch((reason) => setError(reason instanceof Error ? reason.message : "Could not load account data."));
+      } else {
+        setActivities([]);
+        setSessions([]);
+        setPreferences(undefined);
+        setDataReady(true);
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, [hydrate]);
 
   const value = useMemo<AppStateValue>(
     () => ({
+      user,
       activities,
       sessions,
       preferences,
-      ready,
-      async upsertActivities(entries) {
-        const next = [...activities.filter((entry) => !entries.some((item) => item.id === entry.id)), ...entries];
-        setActivities(next);
-        await saveActivities(next);
+      authReady,
+      dataReady,
+      error: !isSupabaseConfigured ? "Supabase environment variables are required." : error,
+      async refresh() {
+        if (user) await hydrate(user);
+      },
+      async saveCheckIn(sessionId, entries) {
+        if (!user) throw new Error("Sign in before saving a check-in.");
+        await completeCheckIn(user.id, sessionId, entries);
+        await hydrate(user);
+      },
+      async updateActivity(entry) {
+        if (!user) throw new Error("Sign in before editing an activity.");
+        await updateStoredActivity(user.id, entry);
+        await hydrate(user);
       },
       async deleteActivity(id) {
-        const next = activities.filter((entry) => entry.id !== id);
-        setActivities(next);
-        await saveActivities(next);
-      },
-      async addSession(session) {
-        const next = [session, ...sessions.filter((item) => item.id !== session.id)];
-        setSessions(next);
-        await saveSessions(next);
+        await deleteStoredActivity(id);
+        if (user) await hydrate(user);
       },
       async updatePreferences(nextPreferences) {
+        if (!user) throw new Error("Sign in before changing preferences.");
+        await saveUserPreferences(user.id, nextPreferences);
         setPreferences(nextPreferences);
-        await savePreferences(nextPreferences);
       },
-      exportAllData: exportData
+      async exportAllData() {
+        return { activities, sessions, preferences };
+      },
+      async logOut() {
+        if (!supabase) throw new Error("Supabase is not configured.");
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) throw signOutError;
+      },
+      async deleteAccount() {
+        if (!supabase) throw new Error("Supabase is not configured.");
+        const { error: deleteError } = await supabase.functions.invoke("delete-account");
+        if (deleteError) throw deleteError;
+        await supabase.auth.signOut({ scope: "local" });
+      }
     }),
-    [activities, preferences, ready, sessions]
+    [activities, authReady, dataReady, error, hydrate, preferences, sessions, user]
   );
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

@@ -1,4 +1,5 @@
-import OpenAI from "https://deno.land/x/openai@v4.69.0/mod.ts";
+// Converts an authenticated user's transcript into strictly structured activities.
+import { authenticateRequest } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,32 +48,47 @@ const schema = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const openai = new OpenAI({ apiKey: Deno.env.get("OPENAI_API_KEY") });
+    await authenticateRequest(req);
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
+
     const { transcript, existingActivities = [], activityDate = new Date().toISOString().slice(0, 10) } = await req.json();
     if (!transcript || typeof transcript !== "string") throw new Error("Missing transcript.");
+    if (new TextEncoder().encode(transcript).length > 50000) throw new Error("Transcript is too large.");
+    if (!Array.isArray(existingActivities) || existingActivities.length > 100) throw new Error("Invalid existing activities.");
 
-    const completion = await openai.chat.completions.create({
-      model: Deno.env.get("OPENAI_EXTRACTION_MODEL") ?? "gpt-4.1-mini",
-      response_format: { type: "json_schema", json_schema: schema },
-      messages: [
-        {
-          role: "system",
-          content:
-            "Extract personal activity entries from check-in transcripts. Normalize durations to minutes. Calculate duration from explicit start/end times. Never invent a duration. Mark uncertainty with needsReview. Avoid duplicates with existing activities. Return unresolved issues instead of asking follow-up questions."
-        },
-        {
-          role: "user",
-          content: JSON.stringify({ activityDate, transcript, existingActivities })
-        }
-      ]
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: Deno.env.get("OPENAI_EXTRACTION_MODEL") ?? "gpt-4.1-mini",
+        response_format: { type: "json_schema", json_schema: schema },
+        messages: [
+          {
+            role: "system",
+            content:
+              "Extract personal activity entries from check-in transcripts. Normalize durations to minutes and calculate them only from an explicit or reasonably implied range. Never invent a duration. If duration is unknown, do not create the activity; add a concise unresolved issue instead. Mark uncertainty with needsReview. Resolve relative dates using activityDate. Avoid duplicates with existing activities. Preserve useful user wording. Return unresolved issues instead of questions."
+          },
+          {
+            role: "user",
+            content: JSON.stringify({ activityDate, transcript, existingActivities })
+          }
+        ]
+      })
     });
+    if (!response.ok) throw new Error("The extraction provider rejected the request.");
 
-    const content = completion.choices[0]?.message?.content;
+    const completion = await response.json();
+    const content = completion.choices?.[0]?.message?.content;
     if (!content) throw new Error("No extraction output.");
     return new Response(content, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
+    const unauthorized = error instanceof Error && error.message === "Unauthorized";
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 400,
+      status: unauthorized ? 401 : 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
