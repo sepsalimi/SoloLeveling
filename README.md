@@ -107,7 +107,14 @@ The test suite covers duration normalization, analytics calculations, duplicate 
 
 The web app is configured for `https://sepsalimi.github.io/SoloLeveling/` with Expo's `/SoloLeveling` base path.
 
-The Pages workflow exports the app in demo mode, writes `dist/.nojekyll` so Expo's `_expo` assets are served correctly, and deploys the `dist` artifact. For the first publish, enable GitHub Pages in the repository settings and choose GitHub Actions as the source.
+The Pages workflow exports the app in demo mode, generates a Workbox offline app shell, writes `dist/.nojekyll` so Expo's `_expo` assets are served correctly, and deploys the `dist` artifact.
+
+To install the app:
+
+- On iPhone or iPad, open the site in Safari, tap Share, then tap Add to Home Screen.
+- On Android, open the site in Chrome, open the browser menu, then tap Install app or Add to Home screen.
+
+The installed app launches in standalone mode and can reopen its cached app shell while offline.
 
 ## Production notes
 

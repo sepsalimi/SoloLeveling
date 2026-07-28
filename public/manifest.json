@@ -1,0 +1,26 @@
+{
+  "id": "/SoloLeveling/",
+  "name": "Life Analytics",
+  "short_name": "Life Analytics",
+  "description": "Understand how you spend your time and how your daily activities affect your life.",
+  "start_url": "/SoloLeveling/",
+  "scope": "/SoloLeveling/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#2F6F73",
+  "background_color": "#F8F5EF",
+  "icons": [
+    {
+      "src": "/SoloLeveling/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/SoloLeveling/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
