@@ -2,7 +2,7 @@ name: Deploy Expo Web to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, cursor/rebuild-functional-mvp-5826]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -44,8 +44,7 @@ jobs:
       - name: Export Expo web app
         run: pnpm export:web
         env:
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_LOCAL_MODE: "true"
 
       - name: Disable Jekyll for Expo assets
         run: touch dist/.nojekyll
@@ -56,7 +55,7 @@ jobs:
           path: dist
 
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
