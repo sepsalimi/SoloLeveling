@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, ViewStyle } from "react-native";
+import { Pressable, StyleProp, StyleSheet, TextStyle, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Text } from "@/components/Text";
 import { palette } from "@/theme/colors";
@@ -9,7 +9,7 @@ type Props = {
   variant?: "primary" | "secondary" | "danger" | "ghost";
   onPress: () => void;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function Button({ label, icon, variant = "primary", onPress, disabled, style }: Props) {
@@ -34,7 +34,18 @@ export function Button({ label, icon, variant = "primary", onPress, disabled, st
   );
 }
 
-const styles = StyleSheet.create({
+type ButtonStyles = {
+  button: ViewStyle;
+  primary: ViewStyle;
+  secondary: ViewStyle;
+  danger: ViewStyle;
+  ghost: ViewStyle;
+  label: TextStyle;
+  disabled: ViewStyle;
+  pressed: ViewStyle;
+};
+
+const styles = StyleSheet.create<ButtonStyles>({
   button: {
     minHeight: 48,
     borderRadius: 8,
@@ -48,7 +59,7 @@ const styles = StyleSheet.create({
   secondary: { backgroundColor: "#DDEBE6" },
   danger: { backgroundColor: "#F7DEDE" },
   ghost: { backgroundColor: "transparent" },
-  label: { fontWeight: "750" },
+  label: { fontWeight: "700" },
   disabled: { opacity: 0.45 },
   pressed: { transform: [{ scale: 0.99 }], opacity: 0.88 }
 });

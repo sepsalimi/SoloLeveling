@@ -2,7 +2,9 @@ name: Deploy Expo Web to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - cursor/deploy-github-pages-5e7f
   workflow_dispatch:
 
 permissions:
@@ -33,6 +35,8 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -41,6 +45,9 @@ jobs:
         run: pnpm export:web
         env:
           EXPO_PUBLIC_DEMO_MODE: "true"
+
+      - name: Disable Jekyll for Expo assets
+        run: touch dist/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4

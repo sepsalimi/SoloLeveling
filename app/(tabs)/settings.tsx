@@ -7,13 +7,16 @@ import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
 import { palette } from "@/theme/colors";
+import { UserPreferences } from "@/types/activity";
 
 export default function SettingsScreen() {
   const { preferences, updatePreferences, exportAllData } = useAppState();
   if (!preferences) return null;
 
-  async function update<K extends keyof typeof preferences>(key: K, value: (typeof preferences)[K]) {
-    await updatePreferences({ ...preferences, [key]: value });
+  const currentPreferences = preferences;
+
+  async function update<K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) {
+    await updatePreferences({ ...currentPreferences, [key]: value });
   }
 
   async function requestNotifications() {
