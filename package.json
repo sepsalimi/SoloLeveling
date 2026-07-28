@@ -13,7 +13,7 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "generate:pwa-icons": "node scripts/generate-pwa-icons.mjs",
-        "export:web": "expo export --platform web --output-dir dist && workbox-cli generateSW workbox-config.js"
+        "export:web": "expo export --platform web --output-dir dist && workbox generateSW workbox-config.js"
     },
     "dependencies": {
         "@expo/vector-icons": "^15.0.0",
