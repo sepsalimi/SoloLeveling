@@ -1,6 +1,5 @@
 // Verifies the text check-in path reaches extraction and preserves the review draft.
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { jest } from "@jest/globals";
 import CheckInScreen from "../../app/(tabs)/check-in";
 
 const mockReplaceDraft = jest.fn();
@@ -28,7 +27,16 @@ jest.mock("expo-audio", () => ({
 jest.mock("@/context/AppState", () => ({
   useAppState: () => ({
     user: { id: "user-1" },
-    preferences: require("@/data/sample").defaultPreferences
+    preferences: {
+      afternoonReminderTime: "14:00",
+      eveningReminderTime: "20:30",
+      reminderDays: [1, 2, 3, 4, 5],
+      efficiencyEnabled: true,
+      moodEnabled: true,
+      retainAudio: false,
+      notificationsEnabled: false,
+      onboardingCompleted: true
+    }
   })
 }));
 
@@ -69,6 +77,6 @@ describe("CheckInScreen", () => {
 
     await waitFor(() => expect(mockProcessTextCheckIn).toHaveBeenCalledWith(expect.anything(), "Worked for one hour"));
     expect(mockReplaceDraft).toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith("/review");
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/review"));
   });
 });
