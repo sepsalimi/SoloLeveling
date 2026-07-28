@@ -37,7 +37,7 @@ export default function SettingsScreen() {
       await updatePreferences(next);
       if (reschedule) await syncReminders(next);
     } catch (error) {
-      setDraft(preferences);
+      setDraft(preferences ?? defaultPreferences);
       Alert.alert("Could not update settings", error instanceof Error ? error.message : "Try again.");
     }
   }
