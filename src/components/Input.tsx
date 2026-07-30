@@ -19,11 +19,11 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 48,
     borderWidth: 1,
-    borderColor: palette.line,
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    borderColor: "transparent",
+    borderRadius: 18,
+    paddingHorizontal: 16,
     fontSize: 16,
-    backgroundColor: palette.surface,
+    backgroundColor: "#E9E5DA",
     color: palette.ink
   },
   inputDark: {

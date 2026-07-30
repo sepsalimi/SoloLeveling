@@ -3,7 +3,6 @@ import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { ActivityCard } from "@/components/ActivityCard";
 import { ActivityEditor } from "@/components/ActivityEditor";
 import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
@@ -13,6 +12,7 @@ import { minutesToLabel } from "@/lib/dates";
 import { palette } from "@/theme/colors";
 import { activityEntrySchema } from "@/lib/validation";
 import { Input } from "@/components/Input";
+import { BrandMark } from "@/components/BrandMark";
 
 export default function HistoryScreen() {
   const { activities, deleteActivity, preferences, updateActivity } = useAppState();
@@ -68,8 +68,12 @@ export default function HistoryScreen() {
 
   return (
     <Screen>
-      <Text variant="title">History</Text>
-      <Input value={query} onChangeText={setQuery} placeholder="Search activities" accessibilityLabel="Search activities" />
+      <View style={styles.topBar}><BrandMark compact /><Text variant="eyebrow">Journal</Text></View>
+      <View style={styles.intro}>
+        <Text variant="display">A record,{"\n"}never a score.</Text>
+        <Text style={styles.lede}>Find a moment, revisit it, or let it remain exactly as remembered.</Text>
+      </View>
+      <Input value={query} onChangeText={setQuery} placeholder="Search the thread..." accessibilityLabel="Search activities" />
       <Filter label="Category" values={activityCategories} selected={category} onChange={setCategory} />
       <Filter label="Social" values={socialContexts} selected={social} onChange={setSocial} />
       <Filter label="Purpose" values={purposeTags} selected={purpose} onChange={setPurpose} />
@@ -85,10 +89,7 @@ export default function HistoryScreen() {
       {Object.entries(grouped).length ? (
         Object.entries(grouped).map(([date, entries]) => (
           <View key={date} style={styles.group}>
-            <Card>
-              <Text variant="heading">{date}</Text>
-              <Text variant="caption">{minutesToLabel(entries.reduce((sum, entry) => sum + entry.durationMinutes, 0))} tracked</Text>
-            </Card>
+            <DateHeading date={date} total={entries.reduce((sum, entry) => sum + entry.durationMinutes, 0)} />
             {entries.map((entry) => (
               <ActivityCard key={entry.id} entry={entry} onEdit={setEditing} onDelete={() => confirmDelete(entry)} />
             ))}
@@ -98,6 +99,20 @@ export default function HistoryScreen() {
         <EmptyState title="No matches" body="Try a different search or filter." />
       )}
     </Screen>
+  );
+}
+
+function DateHeading({ date, total }: { date: string; total: number }) {
+  const value = new Date(`${date}T12:00:00`);
+  return (
+    <View style={styles.dateHeading}>
+      <Text style={styles.dayNumber}>{value.getDate()}</Text>
+      <View style={styles.dateCopy}>
+        <Text variant="eyebrow">{value.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</Text>
+        <Text variant="heading">{value.toLocaleDateString(undefined, { weekday: "long" })}</Text>
+      </View>
+      <Text variant="label" style={styles.dateTotal}>{minutesToLabel(total)}</Text>
+    </View>
   );
 }
 
@@ -130,12 +145,19 @@ function Filter<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  group: { gap: 10 },
-  filter: { gap: 6 },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  intro: { gap: 9, marginTop: 8 },
+  lede: { color: palette.muted, fontSize: 17, lineHeight: 25, maxWidth: 500 },
+  group: { gap: 2, marginTop: 20 },
+  dateHeading: { flexDirection: "row", alignItems: "center", gap: 13, paddingBottom: 10 },
+  dayNumber: { color: palette.coral, fontSize: 44, lineHeight: 46, fontWeight: "900", letterSpacing: -2 },
+  dateCopy: { flex: 1 },
+  dateTotal: { color: palette.teal },
+  filter: { gap: 6, marginTop: 2 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  chip: { minHeight: 38, justifyContent: "center", borderRadius: 999, paddingHorizontal: 12, backgroundColor: "#EAF1EF" },
-  chipActive: { backgroundColor: palette.teal },
-  chipText: { color: palette.teal, fontSize: 13 },
+  chip: { minHeight: 36, justifyContent: "center", borderRadius: 999, paddingHorizontal: 12, backgroundColor: "#E6E1D6" },
+  chipActive: { backgroundColor: palette.forest },
+  chipText: { color: palette.muted, fontSize: 12, fontWeight: "700" },
   chipTextActive: { color: "#FFFFFF", fontSize: 13 },
   actions: { flexDirection: "row", gap: 8 }
 });

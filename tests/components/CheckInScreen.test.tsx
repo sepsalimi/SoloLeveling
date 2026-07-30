@@ -73,7 +73,7 @@ describe("CheckInScreen", () => {
 
     const { getByLabelText, getByText } = render(<CheckInScreen />);
     fireEvent.changeText(getByLabelText("Check-in text"), "Worked for one hour");
-    fireEvent.press(getByText("Extract activities"));
+    fireEvent.press(getByText("Shape my timeline"));
 
     await waitFor(() => expect(mockProcessTextCheckIn).toHaveBeenCalledWith(expect.anything(), "Worked for one hour"));
     await waitFor(() =>

@@ -1,14 +1,14 @@
 {
   "id": "/SoloLeveling/",
-  "name": "Life Analytics",
-  "short_name": "Life Analytics",
-  "description": "Understand how you spend your time and how your daily activities affect your life.",
+  "name": "Woven",
+  "short_name": "Woven",
+  "description": "Turn your day, in your words, into a calm personal timeline.",
   "start_url": "/SoloLeveling/",
   "scope": "/SoloLeveling/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#2F6F73",
-  "background_color": "#F8F5EF",
+  "theme_color": "#123D37",
+  "background_color": "#F3EFE5",
   "icons": [
     {
       "src": "/SoloLeveling/icons/icon-192.png",

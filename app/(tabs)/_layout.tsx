@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useColorScheme } from "react-native";
+import { StyleSheet, useColorScheme, View } from "react-native";
 import { router, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "@/theme/colors";
@@ -17,22 +17,61 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: palette.teal,
+        tabBarActiveTintColor: dark ? palette.mint : palette.forest,
         tabBarInactiveTintColor: dark ? palette.darkMuted : palette.muted,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "800", marginBottom: 8 },
         tabBarStyle: {
-          minHeight: 64,
-          paddingTop: 6,
+          height: 78,
+          paddingTop: 10,
           backgroundColor: dark ? palette.surfaceDark : palette.surface,
-          borderTopColor: dark ? palette.darkLine : palette.line
+          borderTopWidth: 0,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          shadowColor: "#071A18",
+          shadowOffset: { width: 0, height: -8 },
+          shadowOpacity: 0.1,
+          shadowRadius: 20,
+          elevation: 12
         }
       }}
     >
-      <Tabs.Screen name="home" options={{ title: "Today", tabBarIcon: ({ color }) => <Ionicons name="today-outline" size={22} color={color} /> }} />
-      <Tabs.Screen name="check-in" options={{ title: "Check in", tabBarIcon: ({ color }) => <Ionicons name="mic-outline" size={22} color={color} /> }} />
-      <Tabs.Screen name="analytics" options={{ title: "Analytics", tabBarIcon: ({ color }) => <Ionicons name="bar-chart-outline" size={22} color={color} /> }} />
-      <Tabs.Screen name="history" options={{ title: "History", tabBarIcon: ({ color }) => <Ionicons name="calendar-outline" size={22} color={color} /> }} />
-      <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: ({ color }) => <Ionicons name="settings-outline" size={22} color={color} /> }} />
+      <Tabs.Screen name="home" options={{ title: "Day", tabBarIcon: ({ color }) => <Ionicons name="sunny-outline" size={22} color={color} /> }} />
+      <Tabs.Screen name="history" options={{ title: "Journal", tabBarIcon: ({ color }) => <Ionicons name="book-outline" size={22} color={color} /> }} />
+      <Tabs.Screen
+        name="check-in"
+        options={{
+          title: "",
+          tabBarItemStyle: styles.checkInItem,
+          tabBarIcon: () => (
+            <View style={styles.checkInButton}>
+              <Ionicons name="add" size={32} color="#FFFFFF" />
+            </View>
+          )
+        }}
+      />
+      <Tabs.Screen name="analytics" options={{ title: "Patterns", tabBarIcon: ({ color }) => <Ionicons name="pulse-outline" size={22} color={color} /> }} />
+      <Tabs.Screen name="settings" options={{ title: "You", tabBarIcon: ({ color }) => <Ionicons name="person-circle-outline" size={23} color={color} /> }} />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  checkInItem: { top: -22 },
+  checkInButton: {
+    width: 62,
+    height: 62,
+    borderRadius: 23,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.coral,
+    borderWidth: 5,
+    borderColor: palette.paper,
+    transform: [{ rotate: "4deg" }],
+    shadowColor: palette.coral,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 8
+  }
+});
 

@@ -12,13 +12,15 @@ import { useCheckInDraft } from "@/context/CheckInDraft";
 import { ActivityEntry } from "@/types/activity";
 import { isoDate } from "@/lib/dates";
 import { activityEntrySchema } from "@/lib/validation";
+import { BrandMark } from "@/components/BrandMark";
+import { palette } from "@/theme/colors";
 
 export default function ReviewScreen() {
   const { draft, error, ready } = useCheckInDraft();
   if (!ready) {
     return (
       <Screen>
-        <Text variant="title">Review</Text>
+        <View style={styles.topBar}><BrandMark compact /><Text variant="eyebrow">Review</Text></View>
         <Text>Restoring your check-in...</Text>
       </Screen>
     );
@@ -26,7 +28,7 @@ export default function ReviewScreen() {
   if (!draft) {
     return (
       <Screen>
-        <Text variant="title">Review</Text>
+        <View style={styles.topBar}><BrandMark compact /><Text variant="eyebrow">Review</Text></View>
         {error ? <Card><Text>{error}</Text></Card> : null}
         <EmptyState title="No check-in to review" body="Record or type a check-in first." />
         <Button label="Start a check-in" icon="mic-outline" onPress={() => router.replace("/(tabs)/check-in")} />
@@ -122,22 +124,27 @@ function ReviewContent() {
 
   return (
     <Screen>
-      <Text variant="title">Review</Text>
-      <Text variant="caption">Make any useful corrections, then save. You do not need to perfect every field.</Text>
+      <View style={styles.topBar}><BrandMark compact /><Text variant="eyebrow">Review the thread</Text></View>
+      <View style={styles.intro}>
+        <Text variant="display">Words became{"\n"}moments.</Text>
+        <Text style={styles.lede}>Keep what feels true. Adjust what does not. This should take less than a minute.</Text>
+      </View>
       {[...draft.unresolvedIssues, ...draft.transcriptRetentionNotices].map((issue) => (
-        <Card key={issue}>
+        <Card key={issue} variant="tint">
+          <Text variant="label" style={styles.issue}>A loose end</Text>
           <Text>{issue}</Text>
         </Card>
       ))}
       <View style={styles.actions}>
-        <Button label="Approve all" icon="checkmark-done-outline" onPress={() => void updateEntries(entries.map((entry) => ({ ...entry, needsReview: false })))} />
-        <Button label="Add" icon="add-outline" variant="secondary" onPress={addManual} />
-        <Button label="Merge selected" icon="git-merge-outline" variant="secondary" onPress={mergeSelected} disabled={selectedIds.length !== 2} />
-        <Button label="Split selected" icon="git-branch-outline" variant="secondary" onPress={splitSelected} disabled={selectedIds.length !== 1} />
+        <Button label="Keep all" icon="checkmark-done-outline" compact onPress={() => void updateEntries(entries.map((entry) => ({ ...entry, needsReview: false })))} />
+        <Button label="Add moment" icon="add-outline" variant="secondary" compact onPress={addManual} />
+        <Button label="Merge 2" icon="git-merge-outline" variant="secondary" compact onPress={mergeSelected} disabled={selectedIds.length !== 2} />
+        <Button label="Split 1" icon="git-branch-outline" variant="secondary" compact onPress={splitSelected} disabled={selectedIds.length !== 1} />
       </View>
-      {entries.map((entry) => (
+      {entries.map((entry, index) => (
         <ActivityEditor
           key={entry.id}
+          index={index}
           entry={entry}
           preferences={preferences}
           selected={selectedIds.includes(entry.id)}
@@ -150,13 +157,17 @@ function ReviewContent() {
           onDelete={() => void updateEntries(entries.filter((item) => item.id !== entry.id))}
         />
       ))}
-      <Button label={saving ? "Saving" : "Save check-in"} icon="save-outline" onPress={save} disabled={!entries.length || saving} />
-      <Button label="Add follow-up note" icon="add-circle-outline" variant="ghost" onPress={() => router.replace("/(tabs)/check-in")} />
+      <Button label={saving ? "Weaving into your day" : "Weave into my day"} icon="arrow-forward" onPress={save} disabled={!entries.length || saving} />
+      <Button label="I forgot something" icon="add-circle-outline" variant="ghost" onPress={() => router.replace("/(tabs)/check-in")} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  intro: { gap: 10, marginVertical: 8 },
+  lede: { color: palette.muted, fontSize: 17, lineHeight: 25, maxWidth: 500 },
+  issue: { color: palette.coral },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 }
 });
 

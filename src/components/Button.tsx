@@ -10,9 +10,10 @@ type Props = {
   onPress: () => void;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  compact?: boolean;
 };
 
-export function Button({ label, icon, variant = "primary", onPress, disabled, style }: Props) {
+export function Button({ label, icon, variant = "primary", onPress, disabled, style, compact = false }: Props) {
   const isPrimary = variant === "primary";
   const dark = useColorScheme() === "dark";
   const foreground = isPrimary ? "#FFFFFF" : variant === "danger" ? "#9A2E2E" : dark ? palette.mint : palette.teal;
@@ -25,6 +26,7 @@ export function Button({ label, icon, variant = "primary", onPress, disabled, st
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        compact && styles.compact,
         styles[variant],
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
@@ -46,24 +48,26 @@ type ButtonStyles = {
   label: TextStyle;
   disabled: ViewStyle;
   pressed: ViewStyle;
+  compact: ViewStyle;
 };
 
 const styles = StyleSheet.create<ButtonStyles>({
   button: {
-    minHeight: 48,
-    borderRadius: 14,
-    paddingHorizontal: 16,
+    minHeight: 52,
+    borderRadius: 999,
+    paddingHorizontal: 20,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8
   },
-  primary: { backgroundColor: palette.teal },
-  secondary: { backgroundColor: "#DDEBE6" },
-  danger: { backgroundColor: "#F7DEDE" },
+  primary: { backgroundColor: palette.coral },
+  secondary: { backgroundColor: "#DCEAE3" },
+  danger: { backgroundColor: "#F5D9D1" },
   ghost: { backgroundColor: "transparent" },
-  label: { fontWeight: "700" },
+  label: { fontSize: 15, fontWeight: "800" },
   disabled: { opacity: 0.45 },
-  pressed: { transform: [{ scale: 0.99 }], opacity: 0.88 }
+  pressed: { transform: [{ scale: 0.975 }], opacity: 0.9 },
+  compact: { minHeight: 40, paddingHorizontal: 14 }
 });
 

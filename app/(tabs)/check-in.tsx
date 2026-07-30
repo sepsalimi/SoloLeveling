@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import {
   AudioModule,
   RecordingPresets,
@@ -18,6 +18,14 @@ import { useCheckInDraft } from "@/context/CheckInDraft";
 import { ensureDraft, processTextCheckIn, processVoiceCheckIn } from "@/services/checkInService";
 import { palette } from "@/theme/colors";
 import { Input } from "@/components/Input";
+import { BrandMark } from "@/components/BrandMark";
+import { Ionicons } from "@expo/vector-icons";
+
+const prompts = [
+  "What took most of your attention?",
+  "Who were you with?",
+  "What helped you recharge?"
+];
 
 export default function CheckInScreen() {
   const { localMode, user, preferences } = useAppState();
@@ -127,18 +135,29 @@ export default function CheckInScreen() {
 
   return (
     <Screen>
-      <Text variant="title">Check in</Text>
+      <View style={styles.topBar}>
+        <BrandMark compact />
+        <Text variant="eyebrow">New thread</Text>
+      </View>
+      <View style={styles.intro}>
+        <Text variant="display">What made up{"\n"}your day?</Text>
+        <Text style={styles.lede}>Speak naturally. Approximate is useful; perfect is not required.</Text>
+      </View>
       {draftError ? <Card><Text>{draftError}</Text></Card> : null}
       {localMode ? (
-        <Card>
-          <Text variant="heading">Voice notes</Text>
-          <Text>Voice transcription will be available after the private backend is connected. No API key is exposed in this temporary local version.</Text>
-        </Card>
+        <View style={styles.voiceNotice}>
+          <View style={styles.voiceIcon}><Ionicons name="mic-off-outline" size={22} color={palette.coral} /></View>
+          <View style={styles.noticeCopy}>
+            <Text variant="label">Voice is resting for now</Text>
+            <Text variant="caption">Text stays on this device. Voice returns when the private backend is connected.</Text>
+          </View>
+        </View>
       ) : (
-        <Card>
-          <Text variant="heading">Voice note</Text>
+        <Card variant="ink" style={styles.voiceCard}>
+          <Text variant="eyebrow" style={styles.inverseMuted}>Voice note</Text>
           <View style={styles.recordCircle}>
-            <Text variant="metric">{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, "0")}</Text>
+            <Ionicons name={recordingActive ? "stop" : "mic"} size={32} color="#FFFFFF" />
+            <Text variant="metric" style={styles.inverse}>{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, "0")}</Text>
           </View>
           <View style={styles.actions}>
             <Button label={recordingActive ? "Finish" : "Record"} icon={recordingActive ? "stop-outline" : "mic-outline"} onPress={recordingActive ? finishRecording : startRecording} disabled={processing} />
@@ -146,39 +165,79 @@ export default function CheckInScreen() {
             <Button label="Cancel" icon="close-outline" variant="danger" onPress={cancelRecording} disabled={!recordingActive || processing} />
           </View>
           {draft?.pendingAudioUri ? <Button label="Retry saved recording" icon="refresh-outline" variant="secondary" onPress={() => processPendingVoice()} disabled={processing} /> : null}
-          <Text variant="caption">Voice notes are limited to five minutes. The app never records in the background.</Text>
+          <Text variant="caption" style={styles.inverseMuted}>Five minutes maximum. Recording only happens while this screen is open.</Text>
         </Card>
       )}
-      <Card>
-        <Text variant="heading">Text alternative</Text>
+
+      <View style={styles.composer}>
+        <Text variant="eyebrow">Write it out</Text>
         <Input
           value={text}
           onChangeText={setText}
           multiline
-          placeholder="I worked from nine to eleven at around 80 percent efficiency..."
+          placeholder="I worked on the presentation from nine to eleven, had lunch with Aya, then went to the gym..."
           style={styles.textArea}
           accessibilityLabel="Check-in text"
         />
-        <Button label={processing ? "Processing" : "Extract activities"} icon="sparkles-outline" onPress={processText} disabled={processing || !text.trim()} />
-        <Text variant="caption">{draft?.entries.length ? `${draft.entries.length} activities are currently in this check-in. Follow-up notes update the same review.` : "Follow-up notes update the same review session and duplicate entries are filtered."}</Text>
-      </Card>
+        <View style={styles.prompts}>
+          {prompts.map((prompt) => (
+            <Pressable key={prompt} onPress={() => setText((current) => current ? `${current}\n${prompt} ` : `${prompt} `)} style={styles.prompt}>
+              <Text style={styles.promptText}>{prompt}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Button label={processing ? "Finding the moments" : "Shape my timeline"} icon="arrow-forward" onPress={processText} disabled={processing || !text.trim()} />
+        <View style={styles.draftStatus}>
+          <View style={[styles.statusDot, draft?.entries.length ? styles.statusActive : undefined]} />
+          <Text variant="caption">
+            {draft?.entries.length
+              ? `${draft.entries.length} moments already in this thread. Add anything you forgot.`
+              : "Nothing leaves this browser in local mode."}
+          </Text>
+        </View>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  intro: { gap: 10, marginTop: 8 },
+  lede: { color: palette.muted, fontSize: 17, lineHeight: 25, maxWidth: 480 },
+  voiceNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    borderRadius: 24,
+    padding: 17,
+    backgroundColor: "#F5DDD4"
+  },
+  voiceIcon: { width: 46, height: 46, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF4EF" },
+  noticeCopy: { flex: 1, gap: 3 },
+  voiceCard: { transform: [{ rotate: "0.4deg" }] },
+  inverse: { color: "#FFFFFF" },
+  inverseMuted: { color: palette.mint },
   recordCircle: {
-    width: 176,
-    height: 176,
-    borderRadius: 88,
+    width: 164,
+    height: 164,
+    borderRadius: 58,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E7F0EC",
-    borderWidth: 8,
-    borderColor: palette.mint
+    gap: 6,
+    backgroundColor: palette.coral,
+    borderWidth: 10,
+    borderColor: "#244F48",
+    transform: [{ rotate: "-3deg" }]
   },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  textArea: { minHeight: 144, paddingVertical: 12, textAlignVertical: "top" }
+  composer: { gap: 14, marginTop: 4 },
+  textArea: { minHeight: 210, paddingTop: 18, paddingBottom: 18, textAlignVertical: "top", fontSize: 17, lineHeight: 25 },
+  prompts: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  prompt: { borderRadius: 999, borderWidth: 1, borderColor: palette.line, paddingVertical: 9, paddingHorizontal: 13 },
+  promptText: { color: palette.muted, fontSize: 12, fontWeight: "700" },
+  draftStatus: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: palette.line },
+  statusActive: { backgroundColor: palette.teal }
 });
 
