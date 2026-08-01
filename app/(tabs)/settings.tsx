@@ -31,7 +31,15 @@ export default function SettingsScreen() {
   const { clearDraft } = useCheckInDraft();
   const [draft, setDraft] = useState<UserPreferences>(preferences ?? defaultPreferences);
   const [busy, setBusy] = useState(false);
-  if (!preferences) return null;
+  if (!preferences) {
+    return (
+      <Screen>
+        <BrandMark compact />
+        <Text variant="heading">Loading your settings…</Text>
+        <Text variant="caption">Preferences will appear once your account data is ready.</Text>
+      </Screen>
+    );
+  }
 
   async function save(next: UserPreferences, reschedule = false) {
     setDraft(next);
@@ -61,8 +69,22 @@ export default function SettingsScreen() {
   function chooseExport() {
     Alert.alert("Export data", "Choose an export format.", [
       { text: "Cancel", style: "cancel" },
-      { text: "JSON", onPress: () => void exportJson() },
-      { text: "CSV", onPress: () => void shareCsvExport(activities) }
+      {
+        text: "JSON",
+        onPress: () => {
+          void exportJson().catch((error) =>
+            Alert.alert("Export failed", error instanceof Error ? error.message : "Try again.")
+          );
+        }
+      },
+      {
+        text: "CSV",
+        onPress: () => {
+          void shareCsvExport(activities).catch((error) =>
+            Alert.alert("Export failed", error instanceof Error ? error.message : "Try again.")
+          );
+        }
+      }
     ]);
   }
 
@@ -178,7 +200,13 @@ function Toggle({ label, value, onValueChange }: { label: string; value: boolean
   return (
     <View style={styles.toggle}>
       <Text variant="label">{label}</Text>
-      <Switch value={value} onValueChange={onValueChange} trackColor={{ false: palette.line, true: palette.mint }} thumbColor={value ? palette.forest : "#FFFFFF"} />
+      <Switch
+        accessibilityLabel={label}
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: palette.line, true: palette.mint }}
+        thumbColor={value ? palette.forest : "#FFFFFF"}
+      />
     </View>
   );
 }

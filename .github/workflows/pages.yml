@@ -2,7 +2,7 @@ name: Deploy Expo Web to GitHub Pages
 
 on:
   push:
-    branches: [main, cursor/rebuild-functional-mvp-5826]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

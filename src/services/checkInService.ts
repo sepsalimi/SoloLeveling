@@ -1,13 +1,13 @@
 // Coordinates draft sessions, transcription, extraction, bounded transcript storage, and audio retention.
 import { File } from "expo-file-system";
+import { Platform } from "react-native";
 import { isoDate } from "@/lib/dates";
+import { appendTranscript, retainedTranscript } from "@/lib/transcripts";
 import { extractActivities } from "@/services/extraction";
 import { supabase } from "@/services/supabase";
 import { ActivityEntry, CheckInDraft } from "@/types/activity";
 import { isLocalMode } from "@/services/runtime";
 import { extractLocalActivities } from "@/services/localExtraction";
-
-const transcriptStorageLimit = 50_000;
 
 function client() {
   if (!supabase) throw new Error("Supabase is not configured.");
@@ -16,10 +16,6 @@ function client() {
 
 function throwIfError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
-}
-
-function retainedTranscript(transcript: string) {
-  return new TextEncoder().encode(transcript).length <= transcriptStorageLimit ? transcript : null;
 }
 
 async function createSession(userId: string) {
@@ -38,8 +34,22 @@ async function createSession(userId: string) {
   return data.id as string;
 }
 
+async function sessionExists(userId: string, sessionId: string) {
+  const { data, error } = await client()
+    .from("check_in_sessions")
+    .select("id")
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  throwIfError(error);
+  return Boolean(data);
+}
+
 export async function ensureDraft(userId: string, draft: CheckInDraft | null): Promise<CheckInDraft> {
-  if (draft?.userId === userId) return draft;
+  if (draft?.userId === userId) {
+    if (isLocalMode) return draft;
+    if (await sessionExists(userId, draft.sessionId)) return draft;
+  }
   return {
     userId,
     sessionId: isLocalMode ? `local-session-${Date.now()}` : await createSession(userId),
@@ -52,30 +62,39 @@ export async function ensureDraft(userId: string, draft: CheckInDraft | null): P
 
 async function extractIntoDraft(draft: CheckInDraft, transcript: string) {
   const result = await extractActivities(transcript, draft.entries, isoDate());
-  const stored = retainedTranscript(transcript);
+  const retention = appendTranscript(draft.transcripts, draft.transcriptRetentionNotices, transcript);
   return {
     ...draft,
-    transcripts: [...draft.transcripts, transcript],
+    ...retention,
     entries: result.activities,
-    unresolvedIssues: [...new Set([...draft.unresolvedIssues, ...result.unresolvedIssues])],
-    transcriptRetentionNotices: stored
-      ? draft.transcriptRetentionNotices
-      : [...draft.transcriptRetentionNotices, "This transcript was processed but not retained because it exceeded 50 KB."]
+    unresolvedIssues: [...new Set([...draft.unresolvedIssues, ...result.unresolvedIssues])]
   };
+}
+
+async function markNoteFailed(noteId: string, storagePath: string | null, code: string, cause: unknown) {
+  const { error } = await client()
+    .from("voice_notes")
+    .update({
+      storage_path: storagePath,
+      processing_status: "failed",
+      processing_error: code
+    })
+    .eq("id", noteId);
+  if (error) {
+    const original = cause instanceof Error ? cause.message : String(cause);
+    throw new Error(`${original} (also failed to mark note as failed: ${error.message})`);
+  }
 }
 
 export async function processTextCheckIn(draft: CheckInDraft, transcript: string): Promise<CheckInDraft> {
   if (isLocalMode) {
     const result = await extractLocalActivities(transcript, draft.entries);
-    const stored = retainedTranscript(transcript);
+    const retention = appendTranscript(draft.transcripts, draft.transcriptRetentionNotices, transcript);
     return {
       ...draft,
-      transcripts: stored ? [...draft.transcripts, transcript] : draft.transcripts,
+      ...retention,
       entries: result.activities,
-      unresolvedIssues: [...new Set([...draft.unresolvedIssues, ...result.unresolvedIssues])],
-      transcriptRetentionNotices: stored
-        ? draft.transcriptRetentionNotices
-        : [...draft.transcriptRetentionNotices, "This transcript was processed but not retained because it exceeded 50 KB."]
+      unresolvedIssues: [...new Set([...draft.unresolvedIssues, ...result.unresolvedIssues])]
     };
   }
   const db = client();
@@ -95,14 +114,7 @@ export async function processTextCheckIn(draft: CheckInDraft, transcript: string
   try {
     nextDraft = await extractIntoDraft(draft, transcript);
   } catch (error) {
-    const { error: failureUpdateError } = await db
-      .from("voice_notes")
-      .update({
-        processing_status: "failed",
-        processing_error: "EXTRACTION_FAILED"
-      })
-      .eq("id", note.id);
-    throwIfError(failureUpdateError);
+    await markNoteFailed(note.id, null, "EXTRACTION_FAILED", error);
     throw error;
   }
   const { error: updateError } = await db
@@ -133,24 +145,36 @@ export async function processVoiceCheckIn(
   }
   const db = client();
   const file = new File(audioUri);
-  const { data: note, error: noteError } = await db
-    .from("voice_notes")
-    .insert({
-      session_id: draft.sessionId,
-      user_id: draft.userId,
-      processing_status: "processing"
-    })
-    .select("id")
-    .single();
-  throwIfError(noteError);
-  if (!note) throw new Error("The voice note was not created.");
+  let noteId = draft.pendingVoiceNoteId;
+
+  if (noteId) {
+    const { error: resetError } = await db
+      .from("voice_notes")
+      .update({ processing_status: "processing", processing_error: null })
+      .eq("id", noteId)
+      .eq("user_id", draft.userId);
+    throwIfError(resetError);
+  } else {
+    const { data: note, error: noteError } = await db
+      .from("voice_notes")
+      .insert({
+        session_id: draft.sessionId,
+        user_id: draft.userId,
+        processing_status: "processing"
+      })
+      .select("id")
+      .single();
+    throwIfError(noteError);
+    if (!note) throw new Error("The voice note was not created.");
+    noteId = note.id as string;
+  }
 
   let storagePath: string | null = null;
   if (retainAudio) {
-    storagePath = `${draft.userId}/${note.id}.m4a`;
+    storagePath = `${draft.userId}/${noteId}.m4a`;
     const { error: uploadError } = await db.storage
       .from("voice-notes")
-      .upload(storagePath, await file.arrayBuffer(), { contentType: "audio/mp4", upsert: false });
+      .upload(storagePath, await file.arrayBuffer(), { contentType: "audio/mp4", upsert: true });
     throwIfError(uploadError);
   }
 
@@ -158,22 +182,22 @@ export async function processVoiceCheckIn(
   let nextDraft: CheckInDraft;
   try {
     const form = new FormData();
-    form.append("file", file);
+    if (Platform.OS === "web") {
+      form.append("file", file);
+    } else {
+      form.append("file", {
+        uri: audioUri,
+        name: "check-in.m4a",
+        type: "audio/mp4"
+      } as unknown as Blob);
+    }
     const result = await db.functions.invoke("transcribe-note", { body: form });
     throwIfError(result.error);
     transcription = result.data;
     if (!transcription?.transcript) throw new Error("The transcription was empty.");
-    nextDraft = await extractIntoDraft(draft, transcription.transcript);
+    nextDraft = await extractIntoDraft({ ...draft, pendingVoiceNoteId: noteId }, transcription.transcript);
   } catch (error) {
-    const { error: failureUpdateError } = await db
-      .from("voice_notes")
-      .update({
-        storage_path: storagePath,
-        processing_status: "failed",
-        processing_error: "VOICE_PROCESSING_FAILED"
-      })
-      .eq("id", note.id);
-    throwIfError(failureUpdateError);
+    await markNoteFailed(noteId, storagePath, "VOICE_PROCESSING_FAILED", error);
     throw error;
   }
   const { error: updateError } = await db
@@ -184,7 +208,7 @@ export async function processVoiceCheckIn(
       processing_status: "completed",
       processing_error: null
     })
-    .eq("id", note.id);
+    .eq("id", noteId);
   throwIfError(updateError);
 
   const { error: sessionError } = await db
@@ -193,8 +217,9 @@ export async function processVoiceCheckIn(
     .eq("id", draft.sessionId);
   throwIfError(sessionError);
 
-  file.delete();
-  return { ...nextDraft, pendingAudioUri: undefined };
+  const completed = { ...nextDraft, pendingAudioUri: undefined, pendingVoiceNoteId: undefined };
+  if (file.exists) file.delete();
+  return completed;
 }
 
 export function replaceDraftEntries(draft: CheckInDraft, entries: ActivityEntry[]): CheckInDraft {

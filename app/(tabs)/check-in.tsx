@@ -1,3 +1,4 @@
+// Captures a voice or text check-in and turns it into a reviewable activity thread.
 import { useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 import {
@@ -22,9 +23,9 @@ import { BrandMark } from "@/components/BrandMark";
 import { Ionicons } from "@expo/vector-icons";
 
 const prompts = [
-  "What took most of your attention?",
-  "Who were you with?",
-  "What helped you recharge?"
+  "I spent most of my attention on...",
+  "I was with...",
+  "I recharged by..."
 ];
 
 export default function CheckInScreen() {
@@ -45,23 +46,19 @@ export default function CheckInScreen() {
       Alert.alert("Sign in required", "Sign in before recording a check-in.");
       return;
     }
-    try {
-      const permission = await AudioModule.requestRecordingPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert("Microphone permission denied", "You can still use the text check-in field.");
-        return;
-      }
-      const activeDraft = await ensureDraft(user.id, draftRef.current);
-      draftRef.current = activeDraft;
-      await replaceDraft(activeDraft);
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, shouldPlayInBackground: false });
-      await recorder.prepareToRecordAsync();
-      recorder.record({ forDuration: 300 });
-      setPaused(false);
-      setRecordingActive(true);
-    } catch (error) {
-      Alert.alert("Could not start recording", error instanceof Error ? error.message : "Try again.");
+    const permission = await AudioModule.requestRecordingPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Microphone permission denied", "You can still use the text check-in field.");
+      return;
     }
+    const activeDraft = await ensureDraft(user.id, draftRef.current);
+    draftRef.current = activeDraft;
+    await replaceDraft(activeDraft);
+    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, shouldPlayInBackground: false });
+    await recorder.prepareToRecordAsync();
+    recorder.record({ forDuration: 300 });
+    setPaused(false);
+    setRecordingActive(true);
   }
 
   async function finishRecording() {
@@ -133,6 +130,10 @@ export default function CheckInScreen() {
     }
   }
 
+  const emptyStatus = localMode
+    ? "In local mode, text stays on this device."
+    : "Recording and extraction only happen when you ask.";
+
   return (
     <Screen>
       <View style={styles.topBar}>
@@ -155,10 +156,16 @@ export default function CheckInScreen() {
       ) : (
         <Card variant="ink" style={styles.voiceCard}>
           <Text variant="eyebrow" style={styles.inverseMuted}>Voice note</Text>
-          <View style={styles.recordCircle}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={recordingActive ? "Finish recording" : "Start recording"}
+            onPress={() => void (recordingActive ? finishRecording() : startRecording())}
+            disabled={processing}
+            style={styles.recordCircle}
+          >
             <Ionicons name={recordingActive ? "stop" : "mic"} size={32} color="#FFFFFF" />
             <Text variant="metric" style={styles.inverse}>{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, "0")}</Text>
-          </View>
+          </Pressable>
           <View style={styles.actions}>
             <Button label={recordingActive ? "Finish" : "Record"} icon={recordingActive ? "stop-outline" : "mic-outline"} onPress={recordingActive ? finishRecording : startRecording} disabled={processing} />
             <Button label={paused ? "Resume" : "Pause"} icon={paused ? "play-outline" : "pause-outline"} variant="secondary" onPress={togglePause} disabled={!recordingActive || processing} />
@@ -181,7 +188,13 @@ export default function CheckInScreen() {
         />
         <View style={styles.prompts}>
           {prompts.map((prompt) => (
-            <Pressable key={prompt} onPress={() => setText((current) => current ? `${current}\n${prompt} ` : `${prompt} `)} style={styles.prompt}>
+            <Pressable
+              key={prompt}
+              accessibilityRole="button"
+              accessibilityLabel={`Use starter: ${prompt}`}
+              onPress={() => setText((current) => current ? `${current}\n${prompt} ` : `${prompt} `)}
+              style={styles.prompt}
+            >
               <Text style={styles.promptText}>{prompt}</Text>
             </Pressable>
           ))}
@@ -192,7 +205,7 @@ export default function CheckInScreen() {
           <Text variant="caption">
             {draft?.entries.length
               ? `${draft.entries.length} moments already in this thread. Add anything you forgot.`
-              : "Nothing leaves this browser in local mode."}
+              : emptyStatus}
           </Text>
         </View>
       </View>
@@ -234,10 +247,9 @@ const styles = StyleSheet.create({
   composer: { gap: 14, marginTop: 4 },
   textArea: { minHeight: 210, paddingTop: 18, paddingBottom: 18, textAlignVertical: "top", fontSize: 17, lineHeight: 25 },
   prompts: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  prompt: { borderRadius: 999, borderWidth: 1, borderColor: palette.line, paddingVertical: 9, paddingHorizontal: 13 },
+  prompt: { borderRadius: 18, borderWidth: 1, borderColor: palette.line, paddingVertical: 9, paddingHorizontal: 13 },
   promptText: { color: palette.muted, fontSize: 12, fontWeight: "700" },
   draftStatus: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: palette.line },
   statusActive: { backgroundColor: palette.teal }
 });
-

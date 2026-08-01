@@ -27,6 +27,7 @@ jest.mock("expo-audio", () => ({
 jest.mock("@/context/AppState", () => ({
   useAppState: () => ({
     user: { id: "user-1" },
+    localMode: true,
     preferences: {
       afternoonReminderTime: "14:00",
       eveningReminderTime: "20:30",

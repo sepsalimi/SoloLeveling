@@ -49,14 +49,29 @@ function AuthLinkHandler() {
     const accessToken = hash.get("access_token");
     const refreshToken = hash.get("refresh_token");
 
+    const type = typeof parsed.queryParams?.type === "string"
+      ? parsed.queryParams.type
+      : hash.get("type");
+    const isRecovery = type === "recovery" || parsed.path?.includes("reset-password");
+
     if (code) {
       void supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) Alert.alert("Could not open account link", error.message);
+        if (error) {
+          Alert.alert("Could not open account link", error.message);
+          return;
+        }
+        if (isRecovery) router.replace("/reset-password");
       });
     } else if (accessToken && refreshToken) {
       void supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ error }) => {
-        if (error) Alert.alert("Could not open account link", error.message);
+        if (error) {
+          Alert.alert("Could not open account link", error.message);
+          return;
+        }
+        if (isRecovery) router.replace("/reset-password");
       });
+    } else if (isRecovery) {
+      router.replace("/reset-password");
     }
   }, [url]);
   return null;
