@@ -40,10 +40,12 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="check-in"
         options={{
-          title: "",
+          title: "Check-in",
+          tabBarAccessibilityLabel: "Record a check-in",
+          tabBarLabel: () => null,
           tabBarItemStyle: styles.checkInItem,
           tabBarIcon: () => (
-            <View style={styles.checkInButton}>
+            <View style={styles.checkInButton} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <Ionicons name="add" size={32} color="#FFFFFF" />
             </View>
           )

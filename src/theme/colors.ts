@@ -1,17 +1,18 @@
+// Woven palette: forest ink, warm paper, coral actions, and readable category accents.
 export const palette = {
   ink: "#12302C",
-  muted: "#667A74",
+  muted: "#4F655F",
   paper: "#F3EFE5",
   surface: "#FFFCF5",
   surfaceDark: "#102B28",
   forest: "#123D37",
-  teal: "#28766C",
+  teal: "#1F5F57",
   mint: "#9EC9B8",
-  coral: "#E75B3C",
-  clay: "#C77757",
-  gold: "#E8B94F",
+  coral: "#C2472E",
+  clay: "#A85A3A",
+  gold: "#C4922A",
   sky: "#AFCFCE",
-  rose: "#CF776B",
+  rose: "#B85A4E",
   line: "#DDD6C8",
   darkInk: "#F7F2E8",
   darkMuted: "#9DB1AA",
@@ -19,18 +20,18 @@ export const palette = {
   darkLine: "#27433E"
 };
 
+// Category accents used for ribbons and icons. Prefer ink for long text labels.
 export const categoryColors: Record<string, string> = {
-  work: "#28766C",
-  learning: "#4F8FA5",
-  health: "#D98A5F",
-  exercise: "#E75B3C",
-  food: "#E8B94F",
-  chores: "#8B9A72",
-  social: "#D87868",
-  entertainment: "#5D8794",
-  rest: "#9EC9B8",
-  travel: "#BC825A",
-  personal_care: "#7CA59C",
-  other: "#9A9286"
+  work: "#1F5F57",
+  learning: "#2F6F86",
+  health: "#A85A3A",
+  exercise: "#C2472E",
+  food: "#8A6A1A",
+  chores: "#5F6B4A",
+  social: "#A84F42",
+  entertainment: "#3D6470",
+  rest: "#3F6F5F",
+  travel: "#8A5A35",
+  personal_care: "#3F6B62",
+  other: "#6A6358"
 };
-

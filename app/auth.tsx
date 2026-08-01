@@ -83,7 +83,7 @@ export default function AuthScreen() {
           secureTextEntry
           accessibilityLabel="Password"
         />
-        <Button label="Continue" icon="arrow-forward" onPress={() => authenticate("login")} disabled={loading} />
+        <Button label="Sign in" icon="arrow-forward" onPress={() => authenticate("login")} disabled={loading} />
         <Button label="Create a private archive" icon="person-add-outline" variant="secondary" onPress={() => authenticate("register")} disabled={loading} />
         <Button label="I forgot my password" icon="mail-outline" variant="ghost" compact onPress={resetPassword} />
       </Card>

@@ -13,8 +13,15 @@ import { Input } from "@/components/Input";
 import { BrandMark } from "@/components/BrandMark";
 import { Ionicons } from "@expo/vector-icons";
 
-const days = ["M", "T", "W", "T", "F", "S", "S"];
-const dayValues = [1, 2, 3, 4, 5, 6, 0];
+const days = [
+  { label: "Mon", value: 1 },
+  { label: "Tue", value: 2 },
+  { label: "Wed", value: 3 },
+  { label: "Thu", value: 4 },
+  { label: "Fri", value: 5 },
+  { label: "Sat", value: 6 },
+  { label: "Sun", value: 0 }
+];
 
 export default function OnboardingScreen() {
   const { preferences, updatePreferences } = useAppState();
@@ -68,23 +75,25 @@ export default function OnboardingScreen() {
           </View>
         </View>
         <View style={styles.days}>
-          {days.map((label, index) => {
-            const value = dayValues[index];
-            const active = draft.reminderDays.includes(value);
+          {days.map((day) => {
+            const active = draft.reminderDays.includes(day.value);
             return (
               <Pressable
-                key={`${label}-${index}`}
+                key={day.value}
                 accessibilityRole="button"
-                accessibilityLabel={`${label} reminder`}
+                accessibilityLabel={`${day.label} reminder`}
+                accessibilityState={{ selected: active }}
                 onPress={() =>
                   setDraft({
                     ...draft,
-                    reminderDays: active ? draft.reminderDays.filter((day) => day !== value) : [...draft.reminderDays, value]
+                    reminderDays: active
+                      ? draft.reminderDays.filter((value) => value !== day.value)
+                      : [...draft.reminderDays, day.value]
                   })
                 }
                 style={[styles.day, active && styles.dayActive]}
               >
-                <Text style={active ? styles.dayActiveText : undefined}>{label}</Text>
+                <Text style={active ? styles.dayActiveText : undefined}>{day.label}</Text>
               </Pressable>
             );
           })}
@@ -116,7 +125,7 @@ function Toggle({ label, detail, value, onValueChange }: { label: string; detail
   return (
     <View style={styles.toggle}>
       <View style={styles.toggleCopy}><Text variant="label">{label}</Text><Text variant="caption">{detail}</Text></View>
-      <Switch value={value} onValueChange={onValueChange} trackColor={{ false: palette.line, true: palette.mint }} thumbColor={value ? palette.forest : "#FFFFFF"} />
+      <Switch accessibilityLabel={label} value={value} onValueChange={onValueChange} trackColor={{ false: palette.line, true: palette.mint }} thumbColor={value ? palette.forest : "#FFFFFF"} />
     </View>
   );
 }
@@ -129,7 +138,7 @@ const styles = StyleSheet.create({
   timeRow: { flexDirection: "row", gap: 12 },
   timeField: { flex: 1, gap: 7 },
   days: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  day: { width: 40, height: 40, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "#F6F2E8" },
+  day: { minHeight: 40, borderRadius: 14, paddingHorizontal: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#F6F2E8" },
   dayActive: { backgroundColor: palette.forest, transform: [{ rotate: "-3deg" }] },
   dayActiveText: { color: "#FFFFFF" },
   options: { gap: 2 },

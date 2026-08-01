@@ -95,6 +95,8 @@ export default function HistoryScreen() {
             ))}
           </View>
         ))
+      ) : activities.length === 0 ? (
+        <EmptyState title="Your journal is empty" body="Saved check-ins will appear here as a quiet record of your days." />
       ) : (
         <EmptyState title="No matches" body="Try a different search or filter." />
       )}

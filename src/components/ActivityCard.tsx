@@ -41,10 +41,10 @@ export function ActivityCard({
           <View style={styles.fill}>
             <Text variant="label" style={styles.title}>{entry.title}</Text>
             <Text variant="caption">
-              {entry.primaryCategory.replace("_", " ")} · {entry.socialContext.replaceAll("_", " ")}
+              {entry.primaryCategory.replaceAll("_", " ")} · {entry.socialContext.replaceAll("_", " ")}
             </Text>
           </View>
-          <Text style={[styles.duration, { color }]}>{minutesToLabel(entry.durationMinutes)}</Text>
+          <Text style={styles.duration}>{minutesToLabel(entry.durationMinutes)}</Text>
         </View>
         <View style={styles.tags}>
           {entry.needsReview ? <Text style={styles.review}>review</Text> : null}
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   icon: { width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 17, lineHeight: 22 },
-  duration: { fontSize: 16, lineHeight: 22, fontWeight: "900" },
+  duration: { color: palette.ink, fontSize: 16, lineHeight: 22, fontWeight: "900" },
   review: { color: palette.coral, fontWeight: "800", fontSize: 12 },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
   tag: { color: palette.muted, fontSize: 12, fontWeight: "700" },

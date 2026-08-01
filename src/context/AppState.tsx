@@ -18,6 +18,7 @@ import {
   saveLocalSessions
 } from "@/services/localStore";
 import { isoDate } from "@/lib/dates";
+import { syncReminders } from "@/services/reminders";
 
 const localUser = { id: "local-user" } as User;
 
@@ -62,16 +63,20 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     setSessions(data.sessions);
     setPreferences(data.preferences);
     setDataReady(true);
+    if (data.preferences?.notificationsEnabled) {
+      await syncReminders(data.preferences);
+    }
   }, []);
 
   useEffect(() => {
     if (isLocalMode) {
       loadLocalData()
-        .then((data) => {
+        .then(async (data) => {
           setActivities(data.activities);
           setSessions(data.sessions);
           setPreferences(data.preferences);
           setDataReady(true);
+          if (data.preferences.notificationsEnabled) await syncReminders(data.preferences);
         })
         .catch((reason) => {
           setError(reason instanceof Error ? reason.message : "Could not load local data.");
@@ -103,21 +108,22 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setDataReady(true);
       });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       const sessionUser = session?.user ?? null;
       setUser(sessionUser);
-      if (sessionUser) {
-        void hydrate(sessionUser).catch((reason) => {
-          setError(reason instanceof Error ? reason.message : "Could not load account data.");
-          setDataReady(true);
-        });
-      } else {
+      if (!sessionUser) {
         hydrateGeneration.current += 1;
         setActivities([]);
         setSessions([]);
         setPreferences(undefined);
         setDataReady(true);
+        return;
       }
+      if (event === "TOKEN_REFRESHED") return;
+      void hydrate(sessionUser).catch((reason) => {
+        setError(reason instanceof Error ? reason.message : "Could not load account data.");
+        setDataReady(true);
+      });
     });
 
     return () => listener.subscription.unsubscribe();
@@ -178,9 +184,14 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       async updateActivity(entry) {
         if (!user) throw new Error("Sign in before editing an activity.");
         if (isLocalMode) {
-          const next = activities.map((item) => item.id === entry.id ? entry : item);
-          await saveLocalActivities(next);
-          setActivities(next);
+          const nextActivities = activities.map((item) => item.id === entry.id ? entry : item);
+          const nextSessions = sessions.map((session) => ({
+            ...session,
+            entries: session.entries.map((item) => item.id === entry.id ? entry : item)
+          }));
+          await Promise.all([saveLocalActivities(nextActivities), saveLocalSessions(nextSessions)]);
+          setActivities(nextActivities);
+          setSessions(nextSessions);
           return;
         }
         await updateStoredActivity(user.id, entry);
@@ -188,9 +199,14 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       },
       async deleteActivity(id) {
         if (isLocalMode) {
-          const next = activities.filter((entry) => entry.id !== id);
-          await saveLocalActivities(next);
-          setActivities(next);
+          const nextActivities = activities.filter((entry) => entry.id !== id);
+          const nextSessions = sessions.map((session) => ({
+            ...session,
+            entries: session.entries.filter((entry) => entry.id !== id)
+          }));
+          await Promise.all([saveLocalActivities(nextActivities), saveLocalSessions(nextSessions)]);
+          setActivities(nextActivities);
+          setSessions(nextSessions);
           return;
         }
         await deleteStoredActivity(id);

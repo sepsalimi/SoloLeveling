@@ -16,6 +16,8 @@ import { minutesToLabel } from "@/lib/dates";
 import { AnalyticsPeriod } from "@/types/activity";
 import { palette } from "@/theme/colors";
 import { BrandMark } from "@/components/BrandMark";
+import { EmptyState } from "@/components/EmptyState";
+import { router } from "expo-router";
 
 const periods: AnalyticsPeriod[] = ["today", "week", "month", "ytd"];
 const chartColors = [palette.teal, palette.clay, palette.gold, palette.rose, palette.mint];
@@ -31,7 +33,7 @@ export default function AnalyticsScreen() {
   const width = Math.min(Dimensions.get("window").width - 40, 420);
   const chartWidth = Math.max(width, series.length * 42);
   const pieData = Object.entries(summary.byCategory).map(([label, value], index) => ({
-    label: label.replace("_", " "),
+    label: label.replaceAll("_", " "),
     value,
     color: chartColors[index % chartColors.length],
   }));
@@ -51,6 +53,7 @@ export default function AnalyticsScreen() {
   const socialDelta = summary.socialMinutes - previousSummary.socialMinutes;
   const exerciseDays = new Set(entries.filter((entry) => entry.primaryCategory === "exercise").map((entry) => entry.activityDate)).size;
   const topCategory = Object.entries(summary.byCategory).sort((a, b) => b[1] - a[1])[0];
+  const hasEntries = entries.length > 0;
 
   return (
     <Screen>
@@ -61,11 +64,27 @@ export default function AnalyticsScreen() {
       </View>
       <View style={styles.segment}>
         {periods.map((item) => (
-          <Pressable key={item} onPress={() => setPeriod(item)} style={[styles.segmentItem, period === item && styles.segmentActive]}>
+          <Pressable
+            key={item}
+            accessibilityRole="button"
+            accessibilityState={{ selected: period === item }}
+            onPress={() => setPeriod(item)}
+            style={[styles.segmentItem, period === item && styles.segmentActive]}
+          >
             <Text style={period === item ? styles.segmentTextActive : styles.segmentText}>{item.toUpperCase()}</Text>
           </Pressable>
         ))}
       </View>
+      {!hasEntries ? (
+        <EmptyState
+          title="No pattern yet"
+          body="Record a few check-ins and this page will show how your time gathered."
+          actionLabel="Add a check-in"
+          onAction={() => router.push("/(tabs)/check-in")}
+        />
+      ) : null}
+      {hasEntries ? (
+        <>
       <Card variant="tint" style={styles.observation}>
         <Text variant="eyebrow">The clearest thread</Text>
         <Text style={styles.observationText}>
@@ -122,7 +141,7 @@ export default function AnalyticsScreen() {
             <StackedBarChart
               data={{
                 labels: series.map((item) => item.date.slice(5)),
-                legend: stackedCategories.map((item) => item.replace("_", " ")),
+                legend: stackedCategories.map((item) => item.replaceAll("_", " ")),
                 data: stackedData,
                 barColors: stackedCategories.map((_, index) => chartColors[index % chartColors.length])
               }}
@@ -144,9 +163,11 @@ export default function AnalyticsScreen() {
         <Insight number="03" text={`${socialDelta >= 0 ? `${minutesToLabel(socialDelta)} more` : `${minutesToLabel(Math.abs(socialDelta))} less`} social time than the previous period.`} />
         <Insight number="04" text={`Exercise appeared on ${exerciseDays} ${exerciseDays === 1 ? "day" : "days"} in this period.`} />
         {summary.averageEfficiency != null && previousSummary.averageEfficiency != null ? (
-          <Insight number="05" text={`Reported efficiency moved from ${previousSummary.averageEfficiency}% to ${summary.averageEfficiency}%.`} />
+          <Insight number="05" text={`Reported efficiency changed from ${previousSummary.averageEfficiency}% to ${summary.averageEfficiency}%.`} />
         ) : null}
       </View>
+        </>
+      ) : null}
     </Screen>
   );
 }

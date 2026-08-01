@@ -65,7 +65,7 @@ const styles = StyleSheet.create<ButtonStyles>({
   secondary: { backgroundColor: "#DCEAE3" },
   danger: { backgroundColor: "#F5D9D1" },
   ghost: { backgroundColor: "transparent" },
-  label: { fontSize: 15, fontWeight: "800" },
+  label: { fontSize: 16, fontWeight: "800" },
   disabled: { opacity: 0.45 },
   pressed: { transform: [{ scale: 0.975 }], opacity: 0.9 },
   compact: { minHeight: 40, paddingHorizontal: 14 }

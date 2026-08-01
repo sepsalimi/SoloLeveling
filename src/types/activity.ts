@@ -82,5 +82,6 @@ export type CheckInDraft = {
   unresolvedIssues: string[];
   transcriptRetentionNotices: string[];
   pendingAudioUri?: string;
+  pendingVoiceNoteId?: string;
 };
 
