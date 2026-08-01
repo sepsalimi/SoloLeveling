@@ -1,4 +1,4 @@
-// Root providers, auth deep links, fonts, and native-only notification navigation.
+// Root providers, auth deep links, native fonts, and native-only notification navigation.
 import { useEffect, useRef } from "react";
 import { Alert, Platform } from "react-native";
 import { router, Stack } from "expo-router";
@@ -15,35 +15,40 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { AppStateProvider } from "@/context/AppState";
 import { CheckInDraftProvider } from "@/context/CheckInDraft";
-import { NotificationNavigation } from "@/components/NotificationNavigation";
 import { supabase } from "@/services/supabase";
+import { palette } from "@/theme/colors";
 
-SplashScreen.preventAutoHideAsync();
+if (Platform.OS !== "web") {
+  void SplashScreen.preventAutoHideAsync();
+}
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    Fraunces_700Bold,
-    Fraunces_800ExtraBold,
-    SourceSans3_400Regular,
-    SourceSans3_600SemiBold,
-    SourceSans3_700Bold
-  });
+  const [fontsLoaded, fontError] = useFonts(
+    Platform.OS === "web"
+      ? {}
+      : {
+          Fraunces_700Bold,
+          Fraunces_800ExtraBold,
+          SourceSans3_400Regular,
+          SourceSans3_600SemiBold,
+          SourceSans3_700Bold
+        }
+  );
 
   useEffect(() => {
-    if (fontsLoaded) void SplashScreen.hideAsync();
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded) return null;
+    if (Platform.OS === "web") return;
+    if (fontsLoaded || fontError) void SplashScreen.hideAsync();
+  }, [fontsLoaded, fontError]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette.paper }}>
       <SafeAreaProvider>
         <AppStateProvider>
           <CheckInDraftProvider>
-            {Platform.OS !== "web" ? <NotificationNavigation /> : null}
+            <NativeNotificationNavigation />
             <AuthLinkHandler />
             <StatusBar style="auto" />
-            <Stack screenOptions={{ headerShown: false }}>
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.paper } }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="auth" />
               <Stack.Screen name="onboarding" />
@@ -56,6 +61,12 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+function NativeNotificationNavigation() {
+  if (Platform.OS === "web") return null;
+  const { NotificationNavigation } = require("@/components/NotificationNavigation") as typeof import("@/components/NotificationNavigation");
+  return <NotificationNavigation />;
 }
 
 function AuthLinkHandler() {
