@@ -14,5 +14,15 @@ module.exports = {
   clientsClaim: true,
   skipWaiting: true,
   inlineWorkboxRuntime: true,
-  sourcemap: false
+  sourcemap: false,
+  runtimeCaching: [
+    {
+      urlPattern: ({ url }) => url.origin === "https://fonts.googleapis.com" || url.origin === "https://fonts.gstatic.com",
+      handler: "CacheFirst",
+      options: {
+        cacheName: "life-analytics-google-fonts-v1",
+        expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 }
+      }
+    }
+  ]
 };

@@ -1,8 +1,25 @@
-// Expressive type faces for Life Analytics: Fraunces for display, Source Sans 3 for UI.
+// Expressive type faces: CSS family names on web, Expo font module names on native.
+import { Platform } from "react-native";
+
 export const fonts = {
-  display: "Fraunces_800ExtraBold",
-  displayBold: "Fraunces_700Bold",
-  body: "SourceSans3_400Regular",
-  bodySemi: "SourceSans3_600SemiBold",
-  bodyBold: "SourceSans3_700Bold"
+  display: Platform.select({
+    web: "Fraunces, Georgia, \"Times New Roman\", serif",
+    default: "Fraunces_800ExtraBold"
+  })!,
+  displayBold: Platform.select({
+    web: "Fraunces, Georgia, \"Times New Roman\", serif",
+    default: "Fraunces_700Bold"
+  })!,
+  body: Platform.select({
+    web: "\"Source Sans 3\", \"Source Sans Pro\", Helvetica, Arial, sans-serif",
+    default: "SourceSans3_400Regular"
+  })!,
+  bodySemi: Platform.select({
+    web: "\"Source Sans 3\", \"Source Sans Pro\", Helvetica, Arial, sans-serif",
+    default: "SourceSans3_600SemiBold"
+  })!,
+  bodyBold: Platform.select({
+    web: "\"Source Sans 3\", \"Source Sans Pro\", Helvetica, Arial, sans-serif",
+    default: "SourceSans3_700Bold"
+  })!
 };
