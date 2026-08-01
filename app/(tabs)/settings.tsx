@@ -13,6 +13,8 @@ import { shareCsvExport, shareJsonExport } from "@/services/exportData";
 import { defaultPreferences } from "@/data/sample";
 import { useCheckInDraft } from "@/context/CheckInDraft";
 import { Input } from "@/components/Input";
+import { BrandMark } from "@/components/BrandMark";
+import { Ionicons } from "@expo/vector-icons";
 
 const days = [
   { label: "Mon", value: 1 },
@@ -100,21 +102,28 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <Text variant="title">Settings</Text>
-      <Card>
-        <Text variant="heading">Reminders</Text>
-        <Input
-          value={draft.afternoonReminderTime}
-          onChangeText={(afternoonReminderTime) => setDraft({ ...draft, afternoonReminderTime })}
-          onEndEditing={() => void save(draft, true)}
-          accessibilityLabel="Afternoon reminder time"
-        />
-        <Input
-          value={draft.eveningReminderTime}
-          onChangeText={(eveningReminderTime) => setDraft({ ...draft, eveningReminderTime })}
-          onEndEditing={() => void save(draft, true)}
-          accessibilityLabel="Evening reminder time"
-        />
+      <View style={styles.topBar}><BrandMark compact /><Text variant="eyebrow">You</Text></View>
+      <View style={styles.intro}>
+        <Text variant="display">Make Woven{"\n"}feel like yours.</Text>
+        <Text style={styles.lede}>Adjust the rhythm, detail, and privacy of your journal.</Text>
+      </View>
+
+      <View style={styles.sectionTitle}><Ionicons name="notifications-outline" size={22} color={palette.coral} /><Text variant="heading">Your rhythm</Text></View>
+      <Card variant="tint">
+        <View style={styles.timeRow}>
+          <View style={styles.timeField}><Text variant="label">Afternoon</Text><Input
+            value={draft.afternoonReminderTime}
+            onChangeText={(afternoonReminderTime) => setDraft({ ...draft, afternoonReminderTime })}
+            onEndEditing={() => void save(draft, true)}
+            accessibilityLabel="Afternoon reminder time"
+          /></View>
+          <View style={styles.timeField}><Text variant="label">Evening</Text><Input
+            value={draft.eveningReminderTime}
+            onChangeText={(eveningReminderTime) => setDraft({ ...draft, eveningReminderTime })}
+            onEndEditing={() => void save(draft, true)}
+            accessibilityLabel="Evening reminder time"
+          /></View>
+        </View>
         <View style={styles.days}>
           {days.map((day) => {
             const active = draft.reminderDays.includes(day.value);
@@ -136,25 +145,31 @@ export default function SettingsScreen() {
             );
           })}
         </View>
-        <Toggle label="Notifications" value={draft.notificationsEnabled} onValueChange={(value) => void setNotifications(value)} />
+        <Toggle label="Check-in reminders" value={draft.notificationsEnabled} onValueChange={(value) => void setNotifications(value)} />
       </Card>
-      <Card>
-        <Text variant="heading">Tracking options</Text>
-        <Toggle label="Efficiency" value={draft.efficiencyEnabled} onValueChange={(value) => void save({ ...draft, efficiencyEnabled: value })} />
+
+      <View style={styles.sectionTitle}><Ionicons name="options-outline" size={22} color={palette.coral} /><Text variant="heading">What you notice</Text></View>
+      <View style={styles.toggleList}>
+        <Toggle label="Efficiency when productive" value={draft.efficiencyEnabled} onValueChange={(value) => void save({ ...draft, efficiencyEnabled: value })} />
         <Toggle label="Mood and energy" value={draft.moodEnabled} onValueChange={(value) => void save({ ...draft, moodEnabled: value })} />
-        <Toggle label="Retain raw audio" value={draft.retainAudio} onValueChange={(value) => void save({ ...draft, retainAudio: value })} />
-      </Card>
-      <Card>
-        <Text variant="heading">Privacy</Text>
-        <Text>
+        <Toggle label="Keep raw voice notes" value={draft.retainAudio} onValueChange={(value) => void save({ ...draft, retainAudio: value })} />
+      </View>
+
+      <Card variant="ink" style={styles.privacy}>
+        <Ionicons name="lock-closed-outline" size={28} color={palette.gold} />
+        <Text variant="heading" style={styles.inverse}>Your privacy posture</Text>
+        <Text style={styles.inverseBody}>
           {localMode
             ? "This temporary version keeps your data only in this browser. Text extraction runs locally and no activity content is sent to an AI service."
             : "OpenAI transcription and extraction happen through Supabase Edge Functions. The mobile app never contains an OpenAI API key and does not log transcripts, audio URLs, or personal activity content. Transcripts over 50 KB are processed but not retained."}
         </Text>
       </Card>
-      <Button label="Export data" icon="download-outline" onPress={chooseExport} disabled={busy} />
-      <Button label={localMode ? "Clear local data" : "Delete account"} icon="warning-outline" variant="danger" onPress={confirmDeleteAccount} disabled={busy} />
-      {!localMode ? <Button label="Log out" icon="log-out-outline" variant="ghost" onPress={handleLogOut} disabled={busy} /> : null}
+      <View style={styles.dataActions}>
+        <Text variant="eyebrow">Your data</Text>
+        <Button label="Take a copy" icon="download-outline" variant="secondary" onPress={chooseExport} disabled={busy} />
+        <Button label={localMode ? "Clear this browser" : "Delete my archive"} icon="warning-outline" variant="danger" onPress={confirmDeleteAccount} disabled={busy} />
+        {!localMode ? <Button label="Log out" icon="log-out-outline" variant="ghost" compact onPress={handleLogOut} disabled={busy} /> : null}
+      </View>
     </Screen>
   );
 }
@@ -162,18 +177,29 @@ export default function SettingsScreen() {
 function Toggle({ label, value, onValueChange }: { label: string; value: boolean; onValueChange: (value: boolean) => void }) {
   return (
     <View style={styles.toggle}>
-      <Text>{label}</Text>
-      <Switch value={value} onValueChange={onValueChange} />
+      <Text variant="label">{label}</Text>
+      <Switch value={value} onValueChange={onValueChange} trackColor={{ false: palette.line, true: palette.mint }} thumbColor={value ? palette.forest : "#FFFFFF"} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  intro: { gap: 9, marginTop: 8 },
+  lede: { color: palette.muted, fontSize: 17, lineHeight: 25 },
+  sectionTitle: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 },
+  timeRow: { flexDirection: "row", gap: 12 },
+  timeField: { flex: 1, gap: 7 },
   days: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  day: { minHeight: 40, justifyContent: "center", borderRadius: 999, paddingHorizontal: 12, backgroundColor: "#EAF1EF" },
-  dayActive: { backgroundColor: palette.teal },
-  dayText: { color: palette.teal, fontSize: 13 },
+  day: { minHeight: 40, justifyContent: "center", borderRadius: 14, paddingHorizontal: 12, backgroundColor: "#F7F2E8" },
+  dayActive: { backgroundColor: palette.forest, transform: [{ rotate: "-2deg" }] },
+  dayText: { color: palette.muted, fontSize: 12, fontWeight: "700" },
   dayTextActive: { color: "#FFFFFF", fontSize: 13 },
-  toggle: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 }
+  toggleList: { gap: 0 },
+  toggle: { minHeight: 60, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: palette.line },
+  privacy: { marginTop: 10 },
+  inverse: { color: "#FFFFFF" },
+  inverseBody: { color: "#D6E4DE", lineHeight: 23 },
+  dataActions: { gap: 10, marginTop: 8 }
 });
 

@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "Life Analytics",
-    "slug": "life-analytics",
+    "name": "Woven",
+    "slug": "woven",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "lifeanalytics",
+    "scheme": "woven",
     "userInterfaceStyle": "automatic",
     "icon": "./public/icons/icon-512.png",
     "assetBundlePatterns": [
@@ -45,9 +45,9 @@
           "image": "./public/icons/icon-512.png",
           "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#F8F5EF",
+          "backgroundColor": "#F3EFE5",
           "dark": {
-            "backgroundColor": "#0E1717"
+            "backgroundColor": "#071A18"
           }
         }
       ],

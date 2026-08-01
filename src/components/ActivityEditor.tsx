@@ -10,7 +10,7 @@ import {
   socialContexts,
   UserPreferences
 } from "@/types/activity";
-import { palette } from "@/theme/colors";
+import { categoryColors, palette } from "@/theme/colors";
 import { Input } from "@/components/Input";
 
 type Props = {
@@ -20,20 +20,26 @@ type Props = {
   onChange: (entry: ActivityEntry) => void;
   onDelete?: () => void;
   onToggleSelected?: () => void;
+  index?: number;
 };
 
-export function ActivityEditor({ entry, preferences, selected, onChange, onDelete, onToggleSelected }: Props) {
+export function ActivityEditor({ entry, preferences, selected, onChange, onDelete, onToggleSelected, index = 0 }: Props) {
   const update = (patch: Partial<ActivityEntry>) => onChange({ ...entry, ...patch, needsReview: true });
+  const accent = categoryColors[entry.primaryCategory] ?? palette.muted;
 
   return (
-    <Card style={selected ? styles.selected : undefined}>
+    <Card style={[styles.card, { borderLeftColor: accent }, selected && styles.selected]}>
       <View style={styles.header}>
-        <Text variant="heading">Activity</Text>
+        <View>
+          <Text variant="eyebrow" style={{ color: accent }}>Moment {String(index + 1).padStart(2, "0")}</Text>
+          <Text variant="heading">{entry.title || "Untitled moment"}</Text>
+        </View>
         {onToggleSelected ? (
           <Button
             label={selected ? "Selected" : "Select"}
             icon={selected ? "checkmark-circle" : "ellipse-outline"}
             variant="secondary"
+            compact
             onPress={onToggleSelected}
           />
         ) : null}
@@ -108,7 +114,7 @@ export function ActivityEditor({ entry, preferences, selected, onChange, onDelet
         </View>
       ) : null}
 
-      {onDelete ? <Button label="Delete activity" icon="trash-outline" variant="danger" onPress={onDelete} /> : null}
+      {onDelete ? <Button label="Remove moment" icon="trash-outline" variant="danger" compact onPress={onDelete} /> : null}
     </Card>
   );
 }
@@ -157,15 +163,16 @@ function ChoiceGroup<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  selected: { borderColor: palette.teal, borderWidth: 2 },
+  card: { borderLeftWidth: 6, paddingLeft: 18 },
+  selected: { borderColor: palette.coral, borderWidth: 2, borderLeftWidth: 7 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   field: { gap: 6 },
   row: { flexDirection: "row", gap: 10 },
   fill: { flex: 1 },
   small: { width: 100 },
   choices: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  choice: { minHeight: 38, justifyContent: "center", borderRadius: 999, paddingHorizontal: 12, backgroundColor: "#EAF1EF" },
-  choiceActive: { backgroundColor: palette.teal },
+  choice: { minHeight: 38, justifyContent: "center", borderRadius: 999, paddingHorizontal: 12, backgroundColor: "#E9E5DA" },
+  choiceActive: { backgroundColor: palette.forest },
   choiceText: { color: palette.teal, fontSize: 13 },
   choiceTextActive: { color: "#FFFFFF", fontSize: 13 }
 });

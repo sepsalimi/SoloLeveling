@@ -8,6 +8,8 @@ import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { supabase } from "@/services/supabase";
 import { Input } from "@/components/Input";
+import { BrandMark } from "@/components/BrandMark";
+import { palette } from "@/theme/colors";
 
 export default function AuthScreen() {
   const [email, setEmail] = useState("");
@@ -59,11 +61,13 @@ export default function AuthScreen() {
   return (
     <Screen>
       <View style={styles.hero}>
-        <Text variant="title">Life Analytics</Text>
-        <Text>Understand where your time goes from quick voice or text check-ins. No passive tracking.</Text>
+        <BrandMark />
+        <Text variant="display">Your days have{"\n"}a pattern.</Text>
+        <Text style={styles.lede}>A few words at a time can make it visible—without passive tracking.</Text>
       </View>
-      <Card>
-        <Text variant="heading">Sign in</Text>
+      <Card variant="tint">
+        <Text variant="eyebrow">Your private archive</Text>
+        <Text variant="heading">Come back to your thread</Text>
         <Input
           value={email}
           onChangeText={setEmail}
@@ -79,9 +83,9 @@ export default function AuthScreen() {
           secureTextEntry
           accessibilityLabel="Password"
         />
-        <Button label="Log in" icon="log-in-outline" onPress={() => authenticate("login")} disabled={loading} />
-        <Button label="Create account" icon="person-add-outline" variant="secondary" onPress={() => authenticate("register")} disabled={loading} />
-        <Button label="Reset password" icon="mail-outline" variant="ghost" onPress={resetPassword} />
+        <Button label="Continue" icon="arrow-forward" onPress={() => authenticate("login")} disabled={loading} />
+        <Button label="Create a private archive" icon="person-add-outline" variant="secondary" onPress={() => authenticate("register")} disabled={loading} />
+        <Button label="I forgot my password" icon="mail-outline" variant="ghost" compact onPress={resetPassword} />
       </Card>
       <Text variant="caption">
         Your account keeps activity data private with user-scoped database policies. AI requests are handled only by authenticated server functions.
@@ -91,6 +95,7 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: { gap: 10, paddingTop: 20 }
+  hero: { gap: 12, paddingTop: 16, marginBottom: 10 },
+  lede: { color: palette.muted, fontSize: 17, lineHeight: 25, maxWidth: 480 }
 });
 
