@@ -1,6 +1,6 @@
 // Captures a voice or text check-in and turns it into a reviewable activity thread.
 import { useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, useColorScheme, View } from "react-native";
 import {
   AudioModule,
   RecordingPresets,
@@ -17,7 +17,8 @@ import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
 import { useCheckInDraft } from "@/context/CheckInDraft";
 import { ensureDraft, processTextCheckIn, processVoiceCheckIn } from "@/services/checkInService";
-import { palette } from "@/theme/colors";
+import { palette, surfaces } from "@/theme/colors";
+import { FadeUp } from "@/components/motion";
 import { Input } from "@/components/Input";
 import { BrandMark } from "@/components/BrandMark";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,6 +30,8 @@ const prompts = [
 ];
 
 export default function CheckInScreen() {
+  const dark = useColorScheme() === "dark";
+  const theme = surfaces(dark);
   const { localMode, user, preferences } = useAppState();
   const { draft, error: draftError, replaceDraft } = useCheckInDraft();
   const draftRef = useRef(draft);
@@ -140,14 +143,16 @@ export default function CheckInScreen() {
         <BrandMark compact />
         <Text variant="eyebrow">New thread</Text>
       </View>
-      <View style={styles.intro}>
-        <Text variant="display">What made up{"\n"}your day?</Text>
-        <Text style={styles.lede}>Speak naturally. Approximate is useful; perfect is not required.</Text>
-      </View>
+      <FadeUp>
+        <View style={styles.intro}>
+          <Text variant="display">What made up{"\n"}your day?</Text>
+          <Text style={[styles.lede, { color: theme.softText }]}>Speak naturally. Approximate is useful; perfect is not required.</Text>
+        </View>
+      </FadeUp>
       {draftError ? <Card><Text>{draftError}</Text></Card> : null}
       {localMode ? (
-        <View style={styles.voiceNotice}>
-          <View style={styles.voiceIcon}><Ionicons name="mic-off-outline" size={22} color={palette.coral} /></View>
+        <View style={[styles.voiceNotice, { backgroundColor: theme.accent }]}>
+          <View style={[styles.voiceIcon, { backgroundColor: theme.surface }]}><Ionicons name="mic-off-outline" size={22} color={palette.coral} /></View>
           <View style={styles.noticeCopy}>
             <Text variant="label">Voice is resting for now</Text>
             <Text variant="caption">Text stays on this device. Voice returns when the private backend is connected.</Text>
@@ -193,9 +198,9 @@ export default function CheckInScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Use starter: ${prompt}`}
               onPress={() => setText((current) => current ? `${current}\n${prompt} ` : `${prompt} `)}
-              style={styles.prompt}
+              style={[styles.prompt, { borderColor: theme.line }]}
             >
-              <Text style={styles.promptText}>{prompt}</Text>
+              <Text style={[styles.promptText, { color: theme.softText }]}>{prompt}</Text>
             </Pressable>
           ))}
         </View>
@@ -216,16 +221,15 @@ export default function CheckInScreen() {
 const styles = StyleSheet.create({
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   intro: { gap: 10, marginTop: 8 },
-  lede: { color: palette.muted, fontSize: 17, lineHeight: 25, maxWidth: 480 },
+  lede: { fontSize: 17, lineHeight: 25, maxWidth: 480 },
   voiceNotice: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
     borderRadius: 24,
-    padding: 17,
-    backgroundColor: "#F5DDD4"
+    padding: 17
   },
-  voiceIcon: { width: 46, height: 46, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF4EF" },
+  voiceIcon: { width: 46, height: 46, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   noticeCopy: { flex: 1, gap: 3 },
   voiceCard: { transform: [{ rotate: "0.4deg" }] },
   inverse: { color: "#FFFFFF" },
@@ -247,8 +251,8 @@ const styles = StyleSheet.create({
   composer: { gap: 14, marginTop: 4 },
   textArea: { minHeight: 210, paddingTop: 18, paddingBottom: 18, textAlignVertical: "top", fontSize: 17, lineHeight: 25 },
   prompts: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  prompt: { borderRadius: 18, borderWidth: 1, borderColor: palette.line, paddingVertical: 9, paddingHorizontal: 13 },
-  promptText: { color: palette.muted, fontSize: 12, fontWeight: "700" },
+  prompt: { borderRadius: 18, borderWidth: 1, paddingVertical: 9, paddingHorizontal: 13 },
+  promptText: { fontSize: 12, fontWeight: "700" },
   draftStatus: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: palette.line },
   statusActive: { backgroundColor: palette.teal }

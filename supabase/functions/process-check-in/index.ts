@@ -1,5 +1,7 @@
 // Converts an authenticated user's transcript into strictly structured activities.
 import { authenticateRequest } from "../_shared/auth.ts";
+import { parseExtractionResult } from "../_shared/extractionSchema.ts";
+import { enforceRateLimit } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,7 +50,9 @@ const schema = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    await authenticateRequest(req);
+    const { user } = await authenticateRequest(req);
+    enforceRateLimit(`process-check-in:${user.id}`, 20, 60_000);
+
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
 
@@ -84,13 +88,14 @@ Deno.serve(async (req) => {
     const completion = await response.json();
     const content = completion.choices?.[0]?.message?.content;
     if (!content) throw new Error("No extraction output.");
-    return new Response(content, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const validated = parseExtractionResult(content);
+    return new Response(JSON.stringify(validated), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     const unauthorized = error instanceof Error && error.message === "Unauthorized";
+    const rateLimited = error instanceof Error && error.message.startsWith("Too many requests");
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: unauthorized ? 401 : 400,
+      status: unauthorized ? 401 : rateLimited ? 429 : 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
 });
-

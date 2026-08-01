@@ -1,18 +1,20 @@
+// Simple review of extracted activities; advanced merge/split stays behind one control.
 import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { ActivityEditor } from "@/components/ActivityEditor";
+import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { FadeUp } from "@/components/motion";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
 import { useCheckInDraft } from "@/context/CheckInDraft";
-import { ActivityEntry } from "@/types/activity";
-import { isoDate } from "@/lib/dates";
 import { activityEntrySchema } from "@/lib/validation";
-import { BrandMark } from "@/components/BrandMark";
+import { isoDate } from "@/lib/dates";
+import { ActivityEntry } from "@/types/activity";
 import { palette } from "@/theme/colors";
 
 export default function ReviewScreen() {
@@ -44,6 +46,7 @@ function ReviewContent() {
   const [entries, setEntries] = useState(draft?.entries ?? []);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   async function updateEntries(next: ActivityEntry[]) {
     if (!draft) return;
@@ -75,7 +78,7 @@ function ReviewContent() {
     const merged: ActivityEntry = {
       ...a,
       id: `merged-${Date.now()}`,
-      title: `${a.title} + ${b.title}`,
+      title: `${a.title} and ${b.title}`,
       durationMinutes: a.durationMinutes + b.durationMinutes,
       purposeTags: [...new Set([...a.purposeTags, ...b.purposeTags])],
       needsReview: true
@@ -90,8 +93,8 @@ function ReviewContent() {
     if (!selected || selected.durationMinutes < 2) return;
     const firstDuration = Math.floor(selected.durationMinutes / 2);
     const parts: ActivityEntry[] = [
-      { ...selected, id: `${selected.id}-a-${Date.now()}`, title: `${selected.title} part 1`, durationMinutes: firstDuration, needsReview: true },
-      { ...selected, id: `${selected.id}-b-${Date.now()}`, title: `${selected.title} part 2`, durationMinutes: selected.durationMinutes - firstDuration, needsReview: true }
+      { ...selected, id: `${selected.id}-a-${Date.now()}`, title: `${selected.title} (first half)`, durationMinutes: firstDuration, needsReview: true },
+      { ...selected, id: `${selected.id}-b-${Date.now()}`, title: `${selected.title} (second half)`, durationMinutes: selected.durationMinutes - firstDuration, needsReview: true }
     ];
     void updateEntries(entries.flatMap((entry) => (entry.id === selected.id ? parts : [entry])));
     setSelectedIds([]);
@@ -125,10 +128,12 @@ function ReviewContent() {
   return (
     <Screen>
       <View style={styles.topBar}><BrandMark compact /><Text variant="eyebrow">Review the thread</Text></View>
-      <View style={styles.intro}>
-        <Text variant="display">Words became{"\n"}moments.</Text>
-        <Text style={styles.lede}>Keep what feels true. Adjust what does not. This should take less than a minute.</Text>
-      </View>
+      <FadeUp>
+        <View style={styles.intro}>
+          <Text variant="display">Words became{"\n"}moments.</Text>
+          <Text style={styles.lede}>Keep what feels true. Adjust what does not. This should take less than a minute.</Text>
+        </View>
+      </FadeUp>
       {[...draft.unresolvedIssues, ...draft.transcriptRetentionNotices].map((issue) => (
         <Card key={issue} variant="tint">
           <Text variant="label" style={styles.issue}>A loose end</Text>
@@ -138,9 +143,23 @@ function ReviewContent() {
       <View style={styles.actions}>
         <Button label="Keep all" icon="checkmark-done-outline" compact onPress={() => void updateEntries(entries.map((entry) => ({ ...entry, needsReview: false })))} />
         <Button label="Add moment" icon="add-outline" variant="secondary" compact onPress={addManual} />
-        <Button label="Merge 2" icon="git-merge-outline" variant="secondary" compact onPress={mergeSelected} disabled={selectedIds.length !== 2} />
-        <Button label="Split 1" icon="git-branch-outline" variant="secondary" compact onPress={splitSelected} disabled={selectedIds.length !== 1} />
+        <Button
+          label={advancedOpen ? "Hide advanced" : "More actions"}
+          icon={advancedOpen ? "chevron-up-outline" : "options-outline"}
+          variant="ghost"
+          compact
+          onPress={() => setAdvancedOpen((open) => !open)}
+        />
       </View>
+      {advancedOpen ? (
+        <Card variant="outline">
+          <Text variant="caption">Select one activity to split, or two to merge.</Text>
+          <View style={styles.actions}>
+            <Button label="Merge selected" icon="git-merge-outline" variant="secondary" compact onPress={mergeSelected} disabled={selectedIds.length !== 2} />
+            <Button label="Split selected" icon="git-branch-outline" variant="secondary" compact onPress={splitSelected} disabled={selectedIds.length !== 1} />
+          </View>
+        </Card>
+      ) : null}
       {entries.map((entry, index) => (
         <ActivityEditor
           key={entry.id}
@@ -148,16 +167,19 @@ function ReviewContent() {
           entry={entry}
           preferences={preferences}
           selected={selectedIds.includes(entry.id)}
-          onToggleSelected={() =>
-            setSelectedIds((current) =>
-              current.includes(entry.id) ? current.filter((id) => id !== entry.id) : [...current, entry.id].slice(-2)
-            )
+          onToggleSelected={
+            advancedOpen
+              ? () =>
+                  setSelectedIds((current) =>
+                    current.includes(entry.id) ? current.filter((id) => id !== entry.id) : [...current, entry.id].slice(-2)
+                  )
+              : undefined
           }
           onChange={(next) => void updateEntries(entries.map((item) => (item.id === entry.id ? next : item)))}
           onDelete={() => void updateEntries(entries.filter((item) => item.id !== entry.id))}
         />
       ))}
-      <Button label={saving ? "Weaving into your day" : "Weave into my day"} icon="arrow-forward" onPress={save} disabled={!entries.length || saving} />
+      <Button label={saving ? "Saving your day" : "Save to my day"} icon="arrow-forward" onPress={save} disabled={!entries.length || saving} />
       <Button label="I forgot something" icon="add-circle-outline" variant="ghost" onPress={() => router.replace("/(tabs)/check-in")} />
     </Screen>
   );
@@ -170,4 +192,3 @@ const styles = StyleSheet.create({
   issue: { color: palette.coral },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 }
 });
-

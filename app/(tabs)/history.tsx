@@ -1,26 +1,32 @@
+// Journal of saved activities with a collapsed filter panel instead of pill clutter.
 import { useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, useColorScheme, View } from "react-native";
 import { ActivityCard } from "@/components/ActivityCard";
 import { ActivityEditor } from "@/components/ActivityEditor";
+import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
+import { Input } from "@/components/Input";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
-import { ActivityEntry, activityCategories, socialContexts, purposeTags } from "@/types/activity";
-import { minutesToLabel } from "@/lib/dates";
-import { palette } from "@/theme/colors";
 import { activityEntrySchema } from "@/lib/validation";
-import { Input } from "@/components/Input";
-import { BrandMark } from "@/components/BrandMark";
+import { minutesToLabel } from "@/lib/dates";
+import { ActivityEntry, activityCategories, socialContexts, purposeTags } from "@/types/activity";
+import { palette, surfaces } from "@/theme/colors";
 
 export default function HistoryScreen() {
+  const dark = useColorScheme() === "dark";
+  const theme = surfaces(dark);
   const { activities, deleteActivity, preferences, updateActivity } = useAppState();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [social, setSocial] = useState("all");
   const [purpose, setPurpose] = useState("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [editing, setEditing] = useState<ActivityEntry>();
+  const activeFilterCount = [category, social, purpose].filter((value) => value !== "all").length;
+
   const filtered = useMemo(
     () =>
       activities.filter((entry) => {
@@ -58,12 +64,8 @@ export default function HistoryScreen() {
       Alert.alert("Check this activity", "Enter a title, valid date, positive duration, and ratings within their displayed ranges.");
       return;
     }
-    try {
-      await updateActivity({ ...editing, needsReview: false });
-      setEditing(undefined);
-    } catch (error) {
-      Alert.alert("Could not save activity", error instanceof Error ? error.message : "Try again.");
-    }
+    await updateActivity({ ...editing, needsReview: false });
+    setEditing(undefined);
   }
 
   return (
@@ -71,12 +73,37 @@ export default function HistoryScreen() {
       <View style={styles.topBar}><BrandMark compact /><Text variant="eyebrow">Journal</Text></View>
       <View style={styles.intro}>
         <Text variant="display">A record,{"\n"}never a score.</Text>
-        <Text style={styles.lede}>Find a moment, revisit it, or let it remain exactly as remembered.</Text>
+        <Text style={[styles.lede, { color: theme.softText }]}>Find a moment, revisit it, or let it remain exactly as remembered.</Text>
       </View>
       <Input value={query} onChangeText={setQuery} placeholder="Search the thread..." accessibilityLabel="Search activities" />
-      <Filter label="Category" values={activityCategories} selected={category} onChange={setCategory} />
-      <Filter label="Social" values={socialContexts} selected={social} onChange={setSocial} />
-      <Filter label="Purpose" values={purposeTags} selected={purpose} onChange={setPurpose} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: filtersOpen }}
+        onPress={() => setFiltersOpen((open) => !open)}
+        style={[styles.filterToggle, { backgroundColor: theme.chip }]}
+      >
+        <Text variant="label">{filtersOpen ? "Hide filters" : "Filters"}</Text>
+        <Text variant="caption">{activeFilterCount ? `${activeFilterCount} active` : "Category, social, purpose"}</Text>
+      </Pressable>
+      {filtersOpen ? (
+        <View style={styles.filterPanel}>
+          <Filter label="Category" values={activityCategories} selected={category} onChange={setCategory} />
+          <Filter label="Social" values={socialContexts} selected={social} onChange={setSocial} />
+          <Filter label="Purpose" values={purposeTags} selected={purpose} onChange={setPurpose} />
+          {activeFilterCount ? (
+            <Button
+              label="Clear filters"
+              variant="ghost"
+              compact
+              onPress={() => {
+                setCategory("all");
+                setSocial("all");
+                setPurpose("all");
+              }}
+            />
+          ) : null}
+        </View>
+      ) : null}
       {editing ? (
         <>
           <ActivityEditor entry={editing} preferences={preferences} onChange={setEditing} />
@@ -129,6 +156,8 @@ function Filter<T extends string>({
   selected: string;
   onChange: (value: string) => void;
 }) {
+  const dark = useColorScheme() === "dark";
+  const theme = surfaces(dark);
   return (
     <View style={styles.filter}>
       <Text variant="caption">{label}</Text>
@@ -136,8 +165,16 @@ function Filter<T extends string>({
         {["all", ...values].map((value) => {
           const active = selected === value;
           return (
-            <Pressable key={value} onPress={() => onChange(value)} style={[styles.chip, active && styles.chipActive]} accessibilityRole="button" accessibilityState={{ selected: active }}>
-              <Text style={active ? styles.chipTextActive : styles.chipText}>{value.replaceAll("_", " ")}</Text>
+            <Pressable
+              key={value}
+              onPress={() => onChange(value)}
+              style={[styles.chip, { backgroundColor: active ? palette.forest : theme.chip }]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+            >
+              <Text style={active ? styles.chipTextActive : [styles.chipText, { color: theme.softText }]}>
+                {value.replaceAll("_", " ")}
+              </Text>
             </Pressable>
           );
         })}
@@ -149,18 +186,27 @@ function Filter<T extends string>({
 const styles = StyleSheet.create({
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   intro: { gap: 9, marginTop: 8 },
-  lede: { color: palette.muted, fontSize: 17, lineHeight: 25, maxWidth: 500 },
+  lede: { fontSize: 17, lineHeight: 25, maxWidth: 500 },
+  filterToggle: {
+    minHeight: 52,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  },
+  filterPanel: { gap: 12 },
   group: { gap: 2, marginTop: 20 },
   dateHeading: { flexDirection: "row", alignItems: "center", gap: 13, paddingBottom: 10 },
   dayNumber: { color: palette.coral, fontSize: 44, lineHeight: 46, fontWeight: "900", letterSpacing: -2 },
   dateCopy: { flex: 1 },
   dateTotal: { color: palette.teal },
-  filter: { gap: 6, marginTop: 2 },
+  filter: { gap: 6 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  chip: { minHeight: 36, justifyContent: "center", borderRadius: 999, paddingHorizontal: 12, backgroundColor: "#E6E1D6" },
-  chipActive: { backgroundColor: palette.forest },
-  chipText: { color: palette.muted, fontSize: 12, fontWeight: "700" },
+  chip: { minHeight: 36, justifyContent: "center", borderRadius: 14, paddingHorizontal: 12 },
+  chipText: { fontSize: 12, fontWeight: "700" },
   chipTextActive: { color: "#FFFFFF", fontSize: 13 },
   actions: { flexDirection: "row", gap: 8 }
 });
-

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Switch, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, useColorScheme, View } from "react-native";
 import { router } from "expo-router";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -7,7 +7,7 @@ import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
 import { defaultPreferences } from "@/data/sample";
-import { palette } from "@/theme/colors";
+import { palette, surfaces } from "@/theme/colors";
 import { requestNotificationPermission, syncReminders } from "@/services/reminders";
 import { Input } from "@/components/Input";
 import { BrandMark } from "@/components/BrandMark";
@@ -24,6 +24,8 @@ const days = [
 ];
 
 export default function OnboardingScreen() {
+  const dark = useColorScheme() === "dark";
+  const theme = surfaces(dark);
   const { preferences, updatePreferences } = useAppState();
   const [draft, setDraft] = useState(preferences ?? defaultPreferences);
 
@@ -48,7 +50,7 @@ export default function OnboardingScreen() {
       <BrandMark />
       <View style={styles.intro}>
         <Text variant="display">Remember more.{"\n"}Track less.</Text>
-        <Text style={styles.lede}>Woven turns a few honest sentences into a picture of your time. Nothing runs in the background.</Text>
+        <Text style={styles.lede}>Life Analytics turns a few honest sentences into a picture of your time. Nothing runs in the background.</Text>
       </View>
 
       <View style={styles.stepHeader}>
@@ -91,9 +93,9 @@ export default function OnboardingScreen() {
                       : [...draft.reminderDays, day.value]
                   })
                 }
-                style={[styles.day, active && styles.dayActive]}
+                style={[styles.day, { backgroundColor: active ? palette.forest : theme.chip }, active && styles.dayActive]}
               >
-                <Text style={active ? styles.dayActiveText : undefined}>{day.label}</Text>
+                <Text style={active ? styles.dayActiveText : { color: theme.softText }}>{day.label}</Text>
               </Pressable>
             );
           })}
@@ -138,8 +140,8 @@ const styles = StyleSheet.create({
   timeRow: { flexDirection: "row", gap: 12 },
   timeField: { flex: 1, gap: 7 },
   days: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  day: { minHeight: 40, borderRadius: 14, paddingHorizontal: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#F6F2E8" },
-  dayActive: { backgroundColor: palette.forest, transform: [{ rotate: "-3deg" }] },
+  day: { minHeight: 40, borderRadius: 14, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
+  dayActive: { transform: [{ rotate: "-3deg" }] },
   dayActiveText: { color: "#FFFFFF" },
   options: { gap: 2 },
   toggle: { minHeight: 72, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: palette.line },

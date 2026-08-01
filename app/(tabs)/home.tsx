@@ -6,6 +6,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
 import { DayRibbon } from "@/components/DayRibbon";
 import { EmptyState } from "@/components/EmptyState";
+import { FadeUp } from "@/components/motion";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
@@ -23,37 +24,44 @@ export default function HomeScreen() {
 
   return (
     <Screen>
-      <View style={styles.topBar}>
-        <BrandMark />
-        <View style={styles.dateStamp}>
-          <Text style={styles.dateNumber}>{date.getDate()}</Text>
-          <Text variant="eyebrow" style={styles.dateMonth}>
-            {date.toLocaleDateString(undefined, { month: "short" })}
-          </Text>
+      <View style={styles.atmosphere} />
+      <FadeUp>
+        <View style={styles.topBar}>
+          <BrandMark />
+          <View style={styles.dateStamp}>
+            <Text style={styles.dateNumber}>{date.getDate()}</Text>
+            <Text variant="eyebrow" style={styles.dateMonth}>
+              {date.toLocaleDateString(undefined, { month: "short" })}
+            </Text>
+          </View>
         </View>
-      </View>
+      </FadeUp>
 
-      <View style={styles.intro}>
-        <Text variant="eyebrow">Today · {date.toLocaleDateString(undefined, { weekday: "long" })}</Text>
-        <Text variant="display">Your day,{"\n"}loosely woven.</Text>
-        <Text style={styles.lede}>A useful sketch of your time—not a demand to explain every minute.</Text>
-      </View>
+      <FadeUp delay={60}>
+        <View style={styles.intro}>
+          <Text variant="eyebrow">Today · {date.toLocaleDateString(undefined, { weekday: "long" })}</Text>
+          <Text variant="display">Your day,{"\n"}in your words.</Text>
+          <Text style={styles.lede}>A useful sketch of your time—not a demand to explain every minute.</Text>
+        </View>
+      </FadeUp>
 
-      <View style={styles.hero}>
-        <Text variant="eyebrow" style={styles.heroEyebrow}>
-          {summary.totalMinutes ? "Recorded so far" : "Ready when you are"}
-        </Text>
-        <Text style={styles.heroMetric}>
-          {summary.totalMinutes ? minutesToLabel(summary.totalMinutes) : "Begin"}
-        </Text>
-        <Text style={styles.heroCopy}>
-          {summary.totalMinutes
-            ? "Only the parts you chose to remember."
-            : "Start with one sentence about what you have been doing."}
-        </Text>
-        <DayRibbon entries={todayEntries} inverse />
-        <Button label="Add to today" icon="add" onPress={() => router.push("/(tabs)/check-in")} />
-      </View>
+      <FadeUp delay={120}>
+        <View style={styles.hero}>
+          <Text variant="eyebrow" style={styles.heroEyebrow}>
+            {summary.totalMinutes ? "Recorded so far" : "Ready when you are"}
+          </Text>
+          <Text style={styles.heroMetric}>
+            {summary.totalMinutes ? minutesToLabel(summary.totalMinutes) : "Begin"}
+          </Text>
+          <Text style={styles.heroCopy}>
+            {summary.totalMinutes
+              ? "Only the parts you chose to remember."
+              : "Start with one sentence about what you have been doing."}
+          </Text>
+          <DayRibbon entries={todayEntries} inverse />
+          <Button label="Add to today" icon="add" onPress={() => router.push("/(tabs)/check-in")} />
+        </View>
+      </FadeUp>
 
       <View style={styles.sectionHeader}>
         <View>
@@ -80,6 +88,16 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  atmosphere: {
+    position: "absolute",
+    top: -40,
+    right: -80,
+    width: 220,
+    height: 220,
+    borderRadius: 999,
+    backgroundColor: "#E7D7A8",
+    opacity: 0.35
+  },
   topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   dateStamp: {
     width: 54,

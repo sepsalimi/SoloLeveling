@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Dimensions, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Dimensions, Pressable, ScrollView, StyleSheet, useColorScheme, View } from "react-native";
 import { LineChart, StackedBarChart } from "react-native-chart-kit";
 import { DonutChart } from "react-native-chart-kit/v2";
 import { Card } from "@/components/Card";
@@ -14,7 +14,7 @@ import {
 } from "@/lib/analytics";
 import { minutesToLabel } from "@/lib/dates";
 import { AnalyticsPeriod } from "@/types/activity";
-import { palette } from "@/theme/colors";
+import { palette, surfaces } from "@/theme/colors";
 import { BrandMark } from "@/components/BrandMark";
 import { EmptyState } from "@/components/EmptyState";
 import { router } from "expo-router";
@@ -23,6 +23,8 @@ const periods: AnalyticsPeriod[] = ["today", "week", "month", "ytd"];
 const chartColors = [palette.teal, palette.clay, palette.gold, palette.rose, palette.mint];
 
 export default function AnalyticsScreen() {
+  const dark = useColorScheme() === "dark";
+  const theme = surfaces(dark);
   const [period, setPeriod] = useState<AnalyticsPeriod>("week");
   const { activities } = useAppState();
   const entries = useMemo(() => filterEntriesForPeriod(activities, period), [activities, period]);
@@ -62,7 +64,7 @@ export default function AnalyticsScreen() {
         <Text variant="display">See the shape{"\n"}of your time.</Text>
         <Text style={styles.lede}>Patterns are observations, never grades.</Text>
       </View>
-      <View style={styles.segment}>
+      <View style={[styles.segment, { backgroundColor: theme.chip }]}>
         {periods.map((item) => (
           <Pressable
             key={item}
@@ -71,7 +73,7 @@ export default function AnalyticsScreen() {
             onPress={() => setPeriod(item)}
             style={[styles.segmentItem, period === item && styles.segmentActive]}
           >
-            <Text style={period === item ? styles.segmentTextActive : styles.segmentText}>{item.toUpperCase()}</Text>
+            <Text style={period === item ? styles.segmentTextActive : [styles.segmentText, { color: theme.softText }]}>{item.toUpperCase()}</Text>
           </Pressable>
         ))}
       </View>
@@ -182,9 +184,9 @@ function Insight({ number, text }: { number: string; text: string }) {
 }
 
 const chartConfig = {
-  backgroundGradientFrom: "#FFFFFF",
-  backgroundGradientTo: "#FFFFFF",
-  color: (opacity = 1) => `rgba(47, 111, 115, ${opacity})`,
+  backgroundGradientFrom: palette.surface,
+  backgroundGradientTo: palette.surface,
+  color: (opacity = 1) => `rgba(31, 95, 87, ${opacity})`,
   labelColor: () => palette.muted,
   decimalPlaces: 1
 };
@@ -201,8 +203,8 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   intro: { gap: 8, marginTop: 8 },
   lede: { color: palette.muted, fontSize: 17, lineHeight: 25 },
-  segment: { flexDirection: "row", backgroundColor: "#E5E0D5", borderRadius: 999, padding: 5 },
-  segmentItem: { flex: 1, minHeight: 42, alignItems: "center", justifyContent: "center", borderRadius: 999 },
+  segment: { flexDirection: "row", borderRadius: 18, padding: 5 },
+  segmentItem: { flex: 1, minHeight: 42, alignItems: "center", justifyContent: "center", borderRadius: 14 },
   segmentActive: { backgroundColor: palette.forest },
   segmentText: { color: palette.muted, fontSize: 11, fontWeight: "800" },
   segmentTextActive: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" },

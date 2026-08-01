@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: palette.coral,
     borderWidth: 5,
-    borderColor: palette.paper,
+    borderColor: palette.surface,
     transform: [{ rotate: "4deg" }],
     shadowColor: palette.coral,
     shadowOffset: { width: 0, height: 8 },

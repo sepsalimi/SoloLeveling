@@ -1,5 +1,5 @@
 // Provides the complete, compact editor used for extracted and historical activities.
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, useColorScheme, View } from "react-native";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Text } from "@/components/Text";
@@ -10,7 +10,7 @@ import {
   socialContexts,
   UserPreferences
 } from "@/types/activity";
-import { categoryColors, palette } from "@/theme/colors";
+import { categoryColors, palette, surfaces } from "@/theme/colors";
 import { Input } from "@/components/Input";
 
 type Props = {
@@ -139,6 +139,8 @@ function ChoiceGroup<T extends string>({
   selected: readonly T[];
   onPress: (value: T) => void;
 }) {
+  const dark = useColorScheme() === "dark";
+  const theme = surfaces(dark);
   return (
     <View style={styles.field}>
       <Text variant="caption">{label}</Text>
@@ -151,9 +153,11 @@ function ChoiceGroup<T extends string>({
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               onPress={() => onPress(value)}
-              style={[styles.choice, active && styles.choiceActive]}
+              style={[styles.choice, { backgroundColor: active ? palette.forest : theme.chip }]}
             >
-              <Text style={active ? styles.choiceTextActive : styles.choiceText}>{value.replaceAll("_", " ")}</Text>
+              <Text style={active ? styles.choiceTextActive : [styles.choiceText, { color: theme.softText }]}>
+                {value.replaceAll("_", " ")}
+              </Text>
             </Pressable>
           );
         })}
@@ -171,8 +175,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   small: { width: 100 },
   choices: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  choice: { minHeight: 38, justifyContent: "center", borderRadius: 999, paddingHorizontal: 12, backgroundColor: "#E9E5DA" },
-  choiceActive: { backgroundColor: palette.forest },
-  choiceText: { color: palette.teal, fontSize: 13 },
+  choice: { minHeight: 38, justifyContent: "center", borderRadius: 14, paddingHorizontal: 12 },
+  choiceText: { fontSize: 13 },
   choiceTextActive: { color: "#FFFFFF", fontSize: 13 }
 });

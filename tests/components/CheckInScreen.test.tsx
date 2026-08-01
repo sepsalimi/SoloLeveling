@@ -10,6 +10,27 @@ jest.mock("expo-router", () => ({
   router: { push: mockPush }
 }));
 
+jest.mock("react-native-reanimated", () => {
+  const { View } = require("react-native");
+  const chain = () => ({
+    duration() { return this; },
+    delay() { return this; },
+    springify() { return this; },
+    damping() { return this; }
+  });
+  return {
+    __esModule: true,
+    default: { View },
+    FadeInUp: chain(),
+    FadeInDown: chain()
+  };
+});
+
+jest.mock("expo-haptics", () => ({
+  impactAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: "light" }
+}));
+
 jest.mock("expo-audio", () => ({
   AudioModule: { requestRecordingPermissionsAsync: jest.fn() },
   RecordingPresets: { HIGH_QUALITY: {} },
