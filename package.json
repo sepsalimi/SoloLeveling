@@ -18,6 +18,8 @@
         "export:web": "expo export --platform web --output-dir dist && workbox generateSW workbox-config.js"
     },
     "dependencies": {
+        "@expo-google-fonts/fraunces": "^0.4.1",
+        "@expo-google-fonts/source-sans-3": "^0.4.1",
         "@expo/metro-runtime": "~57.0.8",
         "@expo/vector-icons": "^15.0.0",
         "@react-native-async-storage/async-storage": "2.2.0",

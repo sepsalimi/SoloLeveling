@@ -1,23 +1,46 @@
+// Root providers, auth deep links, fonts, and native-only notification navigation.
 import { useEffect, useRef } from "react";
+import { Alert, Platform } from "react-native";
 import { router, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import * as Notifications from "expo-notifications";
 import * as Linking from "expo-linking";
-import { Alert } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useFonts, Fraunces_700Bold, Fraunces_800ExtraBold } from "@expo-google-fonts/fraunces";
+import {
+  SourceSans3_400Regular,
+  SourceSans3_600SemiBold,
+  SourceSans3_700Bold
+} from "@expo-google-fonts/source-sans-3";
+import * as SplashScreen from "expo-splash-screen";
 import { AppStateProvider } from "@/context/AppState";
 import { CheckInDraftProvider } from "@/context/CheckInDraft";
-import "@/services/reminders";
+import { NotificationNavigation } from "@/components/NotificationNavigation";
 import { supabase } from "@/services/supabase";
 
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Fraunces_700Bold,
+    Fraunces_800ExtraBold,
+    SourceSans3_400Regular,
+    SourceSans3_600SemiBold,
+    SourceSans3_700Bold
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) void SplashScreen.hideAsync();
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AppStateProvider>
           <CheckInDraftProvider>
-            <NotificationNavigation />
+            {Platform.OS !== "web" ? <NotificationNavigation /> : null}
             <AuthLinkHandler />
             <StatusBar style="auto" />
             <Stack screenOptions={{ headerShown: false }}>
@@ -74,18 +97,5 @@ function AuthLinkHandler() {
       router.replace("/reset-password");
     }
   }, [url]);
-  return null;
-}
-
-function NotificationNavigation() {
-  const response = Notifications.useLastNotificationResponse();
-  const handled = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    const identifier = response?.notification.request.identifier;
-    if (identifier && identifier !== handled.current && response.notification.request.content.data?.route === "/(tabs)/check-in") {
-      handled.current = identifier;
-      router.push("/(tabs)/check-in");
-    }
-  }, [response]);
   return null;
 }

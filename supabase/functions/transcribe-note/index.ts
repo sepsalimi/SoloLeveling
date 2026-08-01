@@ -1,15 +1,23 @@
 // Transcribes a foreground recording for an authenticated user.
 import { authenticateRequest } from "../_shared/auth.ts";
+import { enforceRateLimit } from "../_shared/rateLimit.ts";
+import { z } from "npm:zod@4.1.5";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
 };
 
+const transcriptionSchema = z.object({
+  transcript: z.string().max(200_000)
+});
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    await authenticateRequest(req);
+    const { user } = await authenticateRequest(req);
+    enforceRateLimit(`transcribe-note:${user.id}`, 10, 60_000);
+
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
 
@@ -33,13 +41,15 @@ Deno.serve(async (req) => {
     }
 
     const data = await response.json();
-    return new Response(JSON.stringify({ transcript: data.text ?? "" }), {
+    const validated = transcriptionSchema.parse({ transcript: data.text ?? "" });
+    return new Response(JSON.stringify(validated), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   } catch (error) {
     const unauthorized = error instanceof Error && error.message === "Unauthorized";
+    const rateLimited = error instanceof Error && error.message.startsWith("Too many requests");
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: unauthorized ? 401 : 400,
+      status: unauthorized ? 401 : rateLimited ? 429 : 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }

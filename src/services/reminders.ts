@@ -3,14 +3,16 @@ import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import { UserPreferences } from "@/types/activity";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false
-  })
-});
+if (Platform.OS !== "web") {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false
+    })
+  });
+}
 
 function parseTime(value: string) {
   const match = value.match(/^([01]\d|2[0-3]):([0-5]\d)$/);

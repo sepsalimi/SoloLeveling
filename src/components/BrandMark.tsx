@@ -1,7 +1,8 @@
-// Renders the Woven identity without depending on a font or image asset.
+// Renders the Life Analytics mark without depending on a separate image asset.
 import { StyleSheet, useColorScheme, View } from "react-native";
 import { Text } from "@/components/Text";
 import { palette } from "@/theme/colors";
+import { fonts } from "@/theme/typography";
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   const dark = useColorScheme() === "dark";
@@ -14,7 +15,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
       </View>
       {!compact ? (
         <View>
-          <Text style={[styles.name, dark && styles.nameDark]}>Woven</Text>
+          <Text style={[styles.name, dark && styles.nameDark]}>Life Analytics</Text>
           <Text variant="eyebrow" style={styles.tagline}>Time, in your words</Text>
         </View>
       ) : null}
@@ -43,7 +44,7 @@ const styles = StyleSheet.create({
   threadOne: { left: 8, backgroundColor: palette.coral },
   threadTwo: { left: 22, backgroundColor: palette.gold },
   threadThree: { left: 36, backgroundColor: palette.mint },
-  name: { color: palette.forest, fontSize: 27, lineHeight: 30, fontWeight: "900", letterSpacing: -1 },
+  name: { color: palette.forest, fontFamily: fonts.display, fontSize: 24, lineHeight: 28, fontWeight: "800", letterSpacing: -0.8 },
   nameDark: { color: palette.darkInk },
   tagline: { color: palette.muted, marginTop: 2, fontSize: 9 }
 });

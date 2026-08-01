@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Switch, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, useColorScheme, View } from "react-native";
 import { router } from "expo-router";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
-import { palette } from "@/theme/colors";
+import { palette, surfaces } from "@/theme/colors";
 import { UserPreferences } from "@/types/activity";
 import { requestNotificationPermission, syncReminders } from "@/services/reminders";
 import { shareCsvExport, shareJsonExport } from "@/services/exportData";
@@ -27,6 +27,8 @@ const days = [
 ];
 
 export default function SettingsScreen() {
+  const dark = useColorScheme() === "dark";
+  const theme = surfaces(dark);
   const { activities, localMode, preferences, updatePreferences, exportAllData, logOut, deleteAccount } = useAppState();
   const { clearDraft } = useCheckInDraft();
   const [draft, setDraft] = useState<UserPreferences>(preferences ?? defaultPreferences);
@@ -126,7 +128,7 @@ export default function SettingsScreen() {
     <Screen>
       <View style={styles.topBar}><BrandMark compact /><Text variant="eyebrow">You</Text></View>
       <View style={styles.intro}>
-        <Text variant="display">Make Woven{"\n"}feel like yours.</Text>
+        <Text variant="display">Make this{"\n"}feel like yours.</Text>
         <Text style={styles.lede}>Adjust the rhythm, detail, and privacy of your journal.</Text>
       </View>
 
@@ -160,9 +162,9 @@ export default function SettingsScreen() {
                     : [...draft.reminderDays, day.value];
                   void save({ ...draft, reminderDays }, true);
                 }}
-                style={[styles.day, active && styles.dayActive]}
+                style={[styles.day, { backgroundColor: active ? palette.forest : theme.chip }, active && styles.dayActive]}
               >
-                <Text style={active ? styles.dayTextActive : styles.dayText}>{day.label}</Text>
+                <Text style={active ? styles.dayTextActive : [styles.dayText, { color: theme.softText }]}>{day.label}</Text>
               </Pressable>
             );
           })}
@@ -219,8 +221,8 @@ const styles = StyleSheet.create({
   timeRow: { flexDirection: "row", gap: 12 },
   timeField: { flex: 1, gap: 7 },
   days: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  day: { minHeight: 40, justifyContent: "center", borderRadius: 14, paddingHorizontal: 12, backgroundColor: "#F7F2E8" },
-  dayActive: { backgroundColor: palette.forest, transform: [{ rotate: "-2deg" }] },
+  day: { minHeight: 40, justifyContent: "center", borderRadius: 14, paddingHorizontal: 12 },
+  dayActive: { transform: [{ rotate: "-2deg" }] },
   dayText: { color: palette.muted, fontSize: 12, fontWeight: "700" },
   dayTextActive: { color: "#FFFFFF", fontSize: 13 },
   toggleList: { gap: 0 },

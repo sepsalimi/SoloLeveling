@@ -1,11 +1,17 @@
 // Stores large Supabase sessions by keeping AES keys in SecureStore and ciphertext in AsyncStorage.
-import "react-native-get-random-values";
+// On web this module is unused for storage, but imports stay inert.
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as aesjs from "aes-js";
-import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
+async function getNativeStore() {
+  await import("react-native-get-random-values");
+  const SecureStore = await import("expo-secure-store");
+  const aesjs = await import("aes-js");
+  return { SecureStore, aesjs };
+}
+
 async function encrypt(key: string, value: string) {
+  const { SecureStore, aesjs } = await getNativeStore();
   const encryptionKey = crypto.getRandomValues(new Uint8Array(32));
   const cipher = new aesjs.ModeOfOperation.ctr(encryptionKey, new aesjs.Counter(1));
   const encryptedBytes = cipher.encrypt(aesjs.utils.utf8.toBytes(value));
@@ -14,6 +20,7 @@ async function encrypt(key: string, value: string) {
 }
 
 async function decrypt(key: string, value: string) {
+  const { SecureStore, aesjs } = await getNativeStore();
   const encryptionKeyHex = await SecureStore.getItemAsync(key);
   if (!encryptionKeyHex) return null;
   const cipher = new aesjs.ModeOfOperation.ctr(aesjs.utils.hex.toBytes(encryptionKeyHex), new aesjs.Counter(1));
@@ -38,6 +45,9 @@ export const largeSecureStore = {
   },
   async removeItem(key: string) {
     await AsyncStorage.removeItem(key);
-    if (Platform.OS !== "web") await SecureStore.deleteItemAsync(key);
+    if (Platform.OS !== "web") {
+      const { SecureStore } = await getNativeStore();
+      await SecureStore.deleteItemAsync(key);
+    }
   }
 };

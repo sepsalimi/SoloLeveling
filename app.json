@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "Woven",
-    "slug": "woven",
+    "name": "Life Analytics",
+    "slug": "life-analytics",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "woven",
+    "scheme": "lifeanalytics",
     "userInterfaceStyle": "automatic",
     "icon": "./public/icons/icon-512.png",
     "assetBundlePatterns": [

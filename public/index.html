@@ -1,32 +1,29 @@
-<!-- HTML shell for the installable Woven web app. -->
+<!-- HTML shell for the installable Life Analytics web app. -->
 <!DOCTYPE html>
 <html lang="%LANG_ISO_CODE%">
   <head>
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="application-name" content="Woven" />
+    <meta name="application-name" content="Life Analytics" />
     <meta name="description" content="Turn your day, in your words, into a calm personal timeline." />
     <meta name="theme-color" content="#123D37" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Woven" />
+    <meta name="apple-mobile-web-app-title" content="Life Analytics" />
     <link rel="manifest" href="/SoloLeveling/manifest.json" />
     <link rel="apple-touch-icon" href="/SoloLeveling/icons/apple-touch-icon.png" />
-    <title>%WEB_TITLE%</title>
-    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <title>Life Analytics</title>
     <style id="expo-reset">
-      /* These styles make the body full-height */
       html,
       body {
         height: 100%;
       }
-      /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;
+        background: #F3EFE5;
       }
-      /* These styles make the root element full-height */
       #root {
         display: flex;
         height: 100%;
@@ -45,11 +42,9 @@
   </head>
 
   <body>
-    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
     <noscript>
       You need to enable JavaScript to run this app.
     </noscript>
-    <!-- The root element for your Expo app. -->
     <div id="root"></div>
   </body>
 </html>
