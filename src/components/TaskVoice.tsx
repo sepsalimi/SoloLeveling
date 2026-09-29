@@ -16,12 +16,12 @@ type Recognition = {
   onend: (() => void) | null;
   start(): void; stop(): void; abort(): void;
 };
-export function TaskVoice({ onTranscript, onInterim, onStateChange, holdToTalk = false, compact = false, startLabel = "Tell me what’s on your mind", listeningHint = "Say each task, its priority, and the time you expect it to take." }: {
+export function TaskVoice({ onTranscript, onInterim, onStateChange, largeMicrophone = false, compact = false, startLabel = "Tell me what’s on your mind", listeningHint = "Say each task, its priority, and the time you expect it to take." }: {
   onTranscript: (text: string) => void;
   onInterim?: (text: string) => void;
   onStateChange?: (state: VoiceState) => void;
   compact?: boolean;
-  holdToTalk?: boolean;
+  largeMicrophone?: boolean;
   startLabel?: string;
   listeningHint?: string;
 }) {
@@ -32,7 +32,7 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, holdToTalk =
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mounted = useRef(true);
   const busy = useRef(false);
-  const held = useRef(false);
+  const stopping = useRef(false);
   const pending = useRef("");
   const received = useRef(false);
   const { height } = useWindowDimensions();
@@ -44,7 +44,7 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, holdToTalk =
   useEffect(() => { statusCallback.current?.(state); }, [state]);
   const removeAudio = useCallback((uri: string | null) => { if (uri && Platform.OS !== "web") { try { new File(uri).delete(); } catch { /* Temporary cache cleanup can be retried by the OS. */ } } }, []);
   const cancel = useCallback(async () => {
-    generation.current++; held.current = false; pending.current = "";
+    generation.current++; stopping.current = false; pending.current = "";
     if (timer.current) clearTimeout(timer.current);
     const speech = recognition.current; recognition.current = null;
     if (speech) { speech.onresult = null; speech.onend = null; speech.onerror = null; speech.abort(); }
@@ -61,6 +61,8 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, holdToTalk =
   }, [cancel]);
   useFocusEffect(useCallback(() => () => { void cancel(); }, [cancel]));
   async function finish() {
+    if (stopping.current) return;
+    stopping.current = true;
     if (timer.current) clearTimeout(timer.current);
     if (recognition.current) { setState("processing"); recognition.current.stop(); return; }
     const current = recording.current; recording.current = null;
@@ -82,7 +84,7 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, holdToTalk =
   }
   async function start() {
     if (busy.current || state !== "idle") return;
-    busy.current = true; pending.current = ""; received.current = false; setMessage("");
+    busy.current = true; stopping.current = false; pending.current = ""; received.current = false; setMessage("");
     const token = ++generation.current;
     function pendingRef(value: string) { pending.current = value; interimCallback.current?.(value); }
     try {
@@ -103,13 +105,13 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, holdToTalk =
         speech.onend = () => {
           if (token !== generation.current) return;
           if (timer.current) clearTimeout(timer.current);
-          recognition.current = null;
+          recognition.current = null; stopping.current = false;
           // Mobile engines can end with only an interim result. Preserve it for review.
           if (pending.current) { callback.current(pending.current); received.current = true; }
           pending.current = ""; interimCallback.current?.("");
           if (mounted.current) {
             setState("idle");
-            if (!received.current) setMessage(current => current || "No words captured. Hold until you finish speaking, or use your keyboard microphone under Prefer to type.");
+            if (!received.current) setMessage(current => current || "No words captured. Tap the microphone, speak, then tap again to finish. Or use your keyboard microphone under Prefer to type.");
           }
         };
         recognition.current = speech; speech.start();
@@ -125,26 +127,18 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, holdToTalk =
       if (!mounted.current || token !== generation.current) { await cancel(); return; }
       setState("recording");
       timer.current = setTimeout(() => void finish(), 300000);
-      if (holdToTalk && !held.current) void finish();
     } catch (error) { await cancel(); if (mounted.current) setMessage(error instanceof Error ? error.message : "Microphone unavailable."); }
     finally { busy.current = false; }
   }
-  if (holdToTalk) {
-    const startHold = () => { held.current = true; void start(); };
-    const endHold = () => { held.current = false; if (!busy.current) void finish(); };
-    const webProps = Platform.OS === "web" ? {
-      onContextMenu: (event: { preventDefault(): void }) => event.preventDefault(),
-      onKeyDown: (event: { key: string; repeat: boolean; preventDefault(): void }) => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); if (!event.repeat) startHold(); } },
-      onKeyUp: (event: { key: string; preventDefault(): void }) => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); endHold(); } },
-    } : {};
+  if (largeMicrophone) {
     return <View style={{ alignItems: "center", gap: 8, width: "100%", flexShrink: 0 }}>
       <View style={{ padding: height < 740 ? 8 : 12, borderRadius: 120, backgroundColor: state === "recording" ? "#423159" : "#211B30", borderWidth: 1, borderColor: state === "recording" ? "#BBA1FF" : "#352946" }}>
-        <Pressable {...webProps} accessibilityRole="button" accessibilityLabel={state === "processing" ? "Finishing recording" : "Hold to talk"} accessibilityHint="Hold while speaking. Release to finish. Keyboard users can hold Space or Enter." disabled={state === "processing"} onPressIn={startHold} onPressOut={endHold}
+        <Pressable accessibilityRole="button" accessibilityLabel={state === "processing" ? "Finishing recording" : state === "recording" ? "Stop recording" : "Start recording"} accessibilityHint="Tap once to start. Tap again to finish." accessibilityState={{ disabled: state === "processing", busy: state === "processing" }} disabled={state === "processing"} onPress={() => void (state === "recording" ? finish() : start())}
           style={{ width: micSize, height: micSize, borderRadius: micSize / 2, alignItems: "center", justifyContent: "center", backgroundColor: state === "recording" ? "#F7AECD" : "#C4B5FD", transform: [{ scale: state === "recording" ? 0.96 : 1 }], ...(Platform.OS === "web" ? { userSelect: "none", touchAction: "none" } as object : {}) }}>
-          <Ionicons name={state === "processing" ? "ellipsis-horizontal" : "mic"} size={height < 740 ? 52 : 68} color="#251936" />
+          <Ionicons name={state === "processing" ? "ellipsis-horizontal" : state === "recording" ? "stop" : "mic"} size={height < 740 ? 52 : 68} color="#251936" />
         </Pressable>
       </View>
-      <Text style={{ color: "#C4B5FD", fontSize: 11, lineHeight: 18, letterSpacing: 2, fontWeight: "800" }}>{state === "recording" ? "LISTENING · RELEASE TO FINISH" : state === "processing" ? "FINISHING…" : "HOLD TO TALK"}</Text>
+      <Text style={{ color: "#C4B5FD", fontSize: 11, lineHeight: 18, letterSpacing: 2, fontWeight: "800" }}>{state === "recording" ? "LISTENING · TAP TO FINISH" : state === "processing" ? "FINISHING…" : "TAP TO TALK"}</Text>
       {!!message && <Text accessibilityRole="alert" style={{ color: "#FFB5C4", textAlign: "center", fontSize: 12, lineHeight: 17 }}>{message}</Text>}
     </View>;
   }

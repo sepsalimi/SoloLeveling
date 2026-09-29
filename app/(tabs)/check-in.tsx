@@ -88,11 +88,11 @@ export default function CheckInScreen() {
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{capturing ? "YOUR MOMENT. NO INTERRUPTIONS." : "A MOMENT FOR YOU"}</Text>
           <Text style={[styles.title, small && { fontSize: 30, lineHeight: 36 }]}>{capturing ? "I'm listening." : text ? "That's your day." : "How was your day?"}</Text>
-          <Text style={styles.subtitle}>{capturing ? "Watch your day fall into place." : text ? "Hold again to add more, or send to review." : "Hold to talk. Release when you're done."}</Text>
+          <Text style={styles.subtitle}>{capturing ? "Watch your day fall into place." : text ? "Tap again to add more, or send to review." : "Tap to talk. Tap again when you're done."}</Text>
         </View>
         <View style={[styles.stage, small && { gap: 8 }]}>
           <View style={[styles.cues, { height: small ? 112 : 136 }]}>{showCues && cues.map(cue => <View key={cue.id} accessibilityLabel={cue.label + (heard.has(cue.id) ? ", covered" : ", not mentioned yet")} style={[styles.cue, { paddingVertical: small ? 6 : 9, backgroundColor: heard.has(cue.id) ? "#34323D" : cue.color, opacity: heard.has(cue.id) ? 0.45 : 1 }]}><Text numberOfLines={1} style={{ color: heard.has(cue.id) ? "#B8B5C0" : "#211B30", fontWeight: "700", fontSize: small ? 12 : 14, lineHeight: small ? 18 : 20 }}>{heard.has(cue.id) ? "✓" : cue.emoji} {cue.label}</Text></View>)}</View>
-          <TaskVoice holdToTalk compact onStateChange={setVoice} onInterim={setInterim} onTranscript={part => setText(current => (current + " " + part).trim())} />
+          <TaskVoice largeMicrophone compact onStateChange={setVoice} onInterim={setInterim} onTranscript={part => setText(current => (current + " " + part).trim())} />
           <Text accessibilityLabel="Live transcript" numberOfLines={small ? 2 : 3} style={[styles.transcript, { minHeight: small ? 44 : 66 }]}>{text} {interim}</Text>
         </View>
         <View style={styles.footer}>
@@ -100,7 +100,7 @@ export default function CheckInScreen() {
           <View style={{ height: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
           {!!text.trim() && action("Send my check-in  ↗", beginReview, capturing)}
           <Pressable accessibilityRole="button" disabled={capturing} style={{ opacity: capturing ? 0 : 1 }} onPress={() => setTyping(!typing)}><Text style={styles.link}>{typing ? "Close keyboard" : "Prefer to type?"}</Text></Pressable></View>
-          <Text style={styles.privacy}>{capturing ? "Release to finish · silent visual feedback" : "Just your voice. A little space to reflect."}</Text>
+          <Text style={styles.privacy}>{capturing ? "Tap to finish · silent visual feedback" : "Just your voice. A little space to reflect."}</Text>
           {!!storageError && <Text style={styles.error}>{storageError}</Text>}
         </View>
       </>}
