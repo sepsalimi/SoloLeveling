@@ -1,0 +1,38 @@
+name: Publish phone preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Tested preview snapshot; newer application source remains on main.
+          ref: fc6970e6e75ccd9163129acd6fffc5d41096fea3
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/configure-pages@v5
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck && pnpm test
+      - run: pnpm export:web && node scripts/prepare-pages.mjs
+        env:
+          EXPO_PUBLIC_DEMO_MODE: "true"
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+      - uses: actions/deploy-pages@v4
+        id: deployment
