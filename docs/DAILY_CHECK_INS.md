@@ -27,3 +27,9 @@ The app plays no chimes, spoken prompts, or haptics during recording. Foreground
 ## Verification
 
 Type checking, unit tests, lint, and the Expo web export validate the implementation. Browser checks cover simulated interim/final speech, work versus workout matching, missing-duration review, IndexedDB persistence, reload, analytics totals, morning opt-in, and narrow-screen layout. Real microphone recognition and deployed Supabase synchronization require separate device/account validation.
+
+## Phone capture update (2026-09-29)
+
+Evening check-in now uses a fixed-height screen. Hold the large microphone to dictate; release to finish. Activity chips appear during capture and dim for recognized topics. Interim-only browser results are preserved for review. Send my check-in opens one activity at a time, then Save my day writes the existing dated session to storage. Keyboard users can hold Space or Enter on the microphone. Prefer to type remains available for denied permissions or unsupported browsers.
+
+Browser verification covers 390x844, 375x667, and 360x640 viewports with simulated speech, live cue matching, hold/release, interim retention, and saving. Real microphone recognition remains dependent on the phone browser and its permission/service availability.

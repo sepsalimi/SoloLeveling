@@ -13,11 +13,10 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="home" options={{ title: "Today", tabBarIcon: ({ color }) => <Ionicons name="today-outline" size={22} color={color} /> }} />
       <Tabs.Screen name="tasks" options={{ title: "Tasks", tabBarIcon: ({ color }) => <Ionicons name="checkbox-outline" size={22} color={color} /> }} />
-      <Tabs.Screen name="check-in" options={{ title: "Check in", tabBarIcon: ({ color }) => <Ionicons name="mic-outline" size={22} color={color} /> }} />
+      <Tabs.Screen name="check-in" options={{ title: "Check in", tabBarStyle: { backgroundColor: "#111019", borderTopColor: "#292432", minHeight: 64, paddingTop: 6 }, tabBarActiveTintColor: "#C4B5FD", tabBarInactiveTintColor: "#8D859E", tabBarIcon: ({ color }) => <Ionicons name="mic-outline" size={22} color={color} /> }} />
       <Tabs.Screen name="analytics" options={{ title: "Analytics", tabBarIcon: ({ color }) => <Ionicons name="bar-chart-outline" size={22} color={color} /> }} />
       <Tabs.Screen name="history" options={{ title: "History", tabBarIcon: ({ color }) => <Ionicons name="calendar-outline" size={22} color={color} /> }} />
       <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: ({ color }) => <Ionicons name="settings-outline" size={22} color={color} /> }} />
     </Tabs>
   );
 }
-
