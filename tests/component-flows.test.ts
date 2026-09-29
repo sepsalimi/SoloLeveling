@@ -4,7 +4,7 @@ describe("check-in surfaces", () => {
     const source = readFileSync("app/(tabs)/check-in.tsx", "utf8");
     expect(source).toContain("Send my check-in");
     expect(source).toContain("Save my day");
-    expect(source).toContain("!!text.trim() && !capturing");
+    expect(source).toContain('beginReview, capturing');
     expect(source).toContain("onInterim={setInterim}");
   });
   it("keeps the older manual review actions", () => {
