@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           # Tested preview snapshot; newer application source remains on main.
-          ref: fc6970e6e75ccd9163129acd6fffc5d41096fea3
+          ref: d7e9b01b057da3baa89233f5678f0ac215f8c04e
       - uses: pnpm/action-setup@v4
         with:
           version: 11.7.0
