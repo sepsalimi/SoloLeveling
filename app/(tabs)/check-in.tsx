@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   success: { width: 110, height: 110, borderRadius: 55, backgroundColor: "#7AE1C7", alignItems: "center", justifyContent: "center" },
   review: { flex: 1, justifyContent: "center", gap: 16, alignItems: "center" },
   duration: { flexDirection: "row", alignItems: "center", gap: 12 },
-  minutes: { color: "#FAF8FF", fontSize: 40, fontWeight: "700", minWidth: 100, textAlign: "center", padding: 6, backgroundColor: "#201D2C", borderRadius: 16 },
+  minutes: { color: "#FAF8FF", fontSize: 40, fontWeight: "700", width: 110, textAlign: "center", padding: 6, backgroundColor: "#201D2C", borderRadius: 16 },
   categories: { flexDirection: "row", flexWrap: "wrap", gap: 6, justifyContent: "center" },
   category: { paddingHorizontal: 10, paddingVertical: 8, backgroundColor: "#282334", borderRadius: 12 },
   reviewActions: { flexDirection: "row", alignItems: "center", gap: 24 },
