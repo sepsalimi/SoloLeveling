@@ -1,3 +1,4 @@
+import { InstallApp } from "@/components/InstallApp";
 import { Alert, Share, StyleSheet, Switch, View } from "react-native";
 import { DailySettings } from "@/components/DailySettings";
 import { router } from "expo-router";
@@ -27,6 +28,7 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <Text variant="title">Settings</Text>
+      <InstallApp />
       <SteamConnection />
       <DailySettings />
       <Card>
@@ -62,4 +64,3 @@ const styles = StyleSheet.create({
   input: { minHeight: 48, borderWidth: 1, borderColor: palette.line, borderRadius: 8, paddingHorizontal: 12, fontSize: 16 },
   toggle: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 }
 });
-

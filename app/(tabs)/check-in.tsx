@@ -1,3 +1,4 @@
+import { InstallApp } from "@/components/InstallApp";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -58,10 +59,10 @@ export default function CheckInScreen() {
     <View style={[styles.content, small && { paddingVertical: 12, gap: 10 }]}>
       <View style={styles.header}>
         <Text style={styles.brand}>DAILY / CHECK IN</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={tab === "evening" ? "Show morning plan" : "Show evening check-in"} disabled={capturing || saving} onPress={() => setTab(tab === "evening" ? "morning" : "evening")} style={styles.mode}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}><InstallApp compact /><Pressable accessibilityRole="button" accessibilityLabel={tab === "evening" ? "Show morning plan" : "Show evening check-in"} disabled={capturing || saving} onPress={() => setTab(tab === "evening" ? "morning" : "evening")} style={styles.mode}>
           <Ionicons name={tab === "evening" ? "moon-outline" : "sunny-outline"} color="#C4B5FD" size={18} />
           <Text style={styles.subtle}>{tab === "evening" ? "Evening" : "Morning"}</Text>
-        </Pressable>
+        </Pressable></View>
       </View>
       {tab === "morning" ? <View style={{ flex: 1, justifyContent: "center" }}><MorningPlan showDisabled /></View> : saved ? <View style={styles.center}>
         <View style={styles.success}><Ionicons name="checkmark" size={54} color="#102B25" /></View>
