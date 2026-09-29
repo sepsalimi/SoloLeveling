@@ -25,12 +25,13 @@ export default function OnboardingScreen() {
     <Screen>
       <Text variant="title">A lighter way to remember your day</Text>
       <Card>
-        <Text variant="heading">Reminders</Text>
+        <Text variant="heading">Morning and evening</Text>
+        <Toggle label="Show my morning plan" value={draft.morningPlanEnabled ?? false} onValueChange={(value) => setDraft({ ...draft, morningPlanEnabled: value })} />
         <TextInput
-          value={draft.afternoonReminderTime}
-          onChangeText={(value) => setDraft({ ...draft, afternoonReminderTime: value })}
+          value={draft.morningReminderTime}
+          onChangeText={(value) => setDraft({ ...draft, morningReminderTime: value })}
           style={styles.input}
-          accessibilityLabel="Afternoon reminder time"
+          accessibilityLabel="Morning reminder time"
         />
         <TextInput
           value={draft.eveningReminderTime}

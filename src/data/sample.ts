@@ -4,6 +4,8 @@ import { isoDate } from "@/lib/dates";
 const today = isoDate();
 
 export const defaultPreferences: UserPreferences = {
+  morningPlanEnabled: false,
+  morningReminderTime: "08:00",
   afternoonReminderTime: "14:00",
   eveningReminderTime: "20:30",
   reminderDays: [1, 2, 3, 4, 5, 6, 0],

@@ -1,0 +1,26 @@
+{
+  "id": "/SoloLeveling/",
+  "name": "Life Analytics",
+  "short_name": "Life Analytics",
+  "description": "Turn your day, in your words, into a calm personal timeline.",
+  "start_url": "/SoloLeveling/",
+  "scope": "/SoloLeveling/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#123D37",
+  "background_color": "#F3EFE5",
+  "icons": [
+    {
+      "src": "/SoloLeveling/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/SoloLeveling/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

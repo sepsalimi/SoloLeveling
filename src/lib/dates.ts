@@ -1,5 +1,5 @@
 export function isoDate(date = new Date()): string {
-  return date.toISOString().slice(0, 10);
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
 }
 
 export function minutesToLabel(minutes: number): string {

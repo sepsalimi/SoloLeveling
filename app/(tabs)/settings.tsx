@@ -1,30 +1,22 @@
-import { Alert, Share, StyleSheet, Switch, TextInput, View } from "react-native";
-import * as Notifications from "expo-notifications";
+import { Alert, Share, StyleSheet, Switch, View } from "react-native";
+import { DailySettings } from "@/components/DailySettings";
 import { router } from "expo-router";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
+import { UserPreferences } from "@/types/activity";
+import { SteamConnection } from "@/components/SteamConnection";
 import { palette } from "@/theme/colors";
 
 export default function SettingsScreen() {
   const { preferences, updatePreferences, exportAllData } = useAppState();
   if (!preferences) return null;
 
-  async function update<K extends keyof typeof preferences>(key: K, value: (typeof preferences)[K]) {
+  async function update<K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) {
+    if (!preferences) return;
     await updatePreferences({ ...preferences, [key]: value });
-  }
-
-  async function requestNotifications() {
-    const permission = await Notifications.requestPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Notifications disabled", "You can still check in manually.");
-      await update("notificationsEnabled", false);
-      return;
-    }
-    await update("notificationsEnabled", true);
-    Alert.alert("Reminders enabled", "Local reminder scheduling is ready for the selected days and times.");
   }
 
   async function shareExport() {
@@ -35,22 +27,8 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <Text variant="title">Settings</Text>
-      <Card>
-        <Text variant="heading">Reminders</Text>
-        <TextInput
-          value={preferences.afternoonReminderTime}
-          onChangeText={(value) => update("afternoonReminderTime", value)}
-          style={styles.input}
-          accessibilityLabel="Afternoon reminder time"
-        />
-        <TextInput
-          value={preferences.eveningReminderTime}
-          onChangeText={(value) => update("eveningReminderTime", value)}
-          style={styles.input}
-          accessibilityLabel="Evening reminder time"
-        />
-        <Toggle label="Notifications" value={preferences.notificationsEnabled} onValueChange={requestNotifications} />
-      </Card>
+      <SteamConnection />
+      <DailySettings />
       <Card>
         <Text variant="heading">Tracking options</Text>
         <Toggle label="Efficiency" value={preferences.efficiencyEnabled} onValueChange={(value) => update("efficiencyEnabled", value)} />

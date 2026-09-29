@@ -61,6 +61,10 @@ export type CheckInSession = {
 };
 
 export type UserPreferences = {
+  steamProfileUrl?: string;
+  morningPlanEnabled?: boolean;
+  morningReminderTime?: string;
+  activityCues?: import("../lib/checkIn").ActivityCue[];
   afternoonReminderTime: string;
   eveningReminderTime: string;
   reminderDays: number[];

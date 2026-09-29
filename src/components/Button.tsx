@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   secondary: { backgroundColor: "#DDEBE6" },
   danger: { backgroundColor: "#F7DEDE" },
   ghost: { backgroundColor: "transparent" },
-  label: { fontWeight: "750" },
+  label: { fontWeight: "700" },
   disabled: { opacity: 0.45 },
   pressed: { transform: [{ scale: 0.99 }], opacity: 0.88 }
 });

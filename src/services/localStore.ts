@@ -1,7 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ActivityEntry, CheckInSession, UserPreferences } from "@/types/activity";
-import { defaultPreferences, sampleActivities, sampleSessions } from "@/data/sample";
+import { defaultPreferences } from "@/data/sample";
 
+import { loadDailyCheckIns } from "./dailyCheckIns";
+import { loadTasks } from "./taskStore";
 const keys = {
   activities: "life.analytics.activities",
   sessions: "life.analytics.sessions",
@@ -19,7 +21,7 @@ async function setJson<T>(key: string, value: T): Promise<void> {
 }
 
 export async function loadActivities(): Promise<ActivityEntry[]> {
-  return getJson(keys.activities, sampleActivities);
+  return getJson(keys.activities, []);
 }
 
 export async function saveActivities(entries: ActivityEntry[]): Promise<void> {
@@ -27,7 +29,7 @@ export async function saveActivities(entries: ActivityEntry[]): Promise<void> {
 }
 
 export async function loadSessions(): Promise<CheckInSession[]> {
-  return getJson(keys.sessions, sampleSessions);
+  return getJson(keys.sessions, []);
 }
 
 export async function saveSessions(sessions: CheckInSession[]): Promise<void> {
@@ -35,7 +37,7 @@ export async function saveSessions(sessions: CheckInSession[]): Promise<void> {
 }
 
 export async function loadPreferences(): Promise<UserPreferences> {
-  return getJson(keys.preferences, defaultPreferences);
+  return { ...defaultPreferences, ...await getJson<Partial<UserPreferences>>(keys.preferences, {}) };
 }
 
 export async function savePreferences(preferences: UserPreferences): Promise<void> {
@@ -48,7 +50,10 @@ export async function isOnboarded(): Promise<boolean> {
 }
 
 export async function exportData() {
+  const dailyCheckIns = await loadDailyCheckIns();
   return {
+    dailyCheckIns,
+    tasks: await loadTasks(),
     activities: await loadActivities(),
     sessions: await loadSessions(),
     preferences: await loadPreferences()

@@ -1,3 +1,4 @@
+import { DailyRhythm } from "@/components/DailyRhythm";
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { ActivityCard } from "@/components/ActivityCard";
@@ -26,6 +27,7 @@ export default function HomeScreen() {
         </View>
         <Button label="Record" icon="mic-outline" onPress={() => router.push("/(tabs)/check-in")} />
       </View>
+      <DailyRhythm />
       <Card>
         <Text variant="caption">Tracked time</Text>
         <Text variant="metric">{minutesToLabel(summary.totalMinutes)}</Text>

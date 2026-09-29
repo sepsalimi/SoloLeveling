@@ -4,16 +4,16 @@ const tsPlugin = require("@typescript-eslint/eslint-plugin");
 
 module.exports = [
   ...expoConfig,
+  { ignores: ["dist/**", "node_modules/**", ".expo/**"] },
   {
     files: ["**/*.ts", "**/*.tsx"],
-    languageOptions: {
-      parser: tsParser
-    },
-    plugins: {
-      "@typescript-eslint": tsPlugin
-    },
-    rules: {
-      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }]
-    }
+    languageOptions: { parser: tsParser },
+    plugins: { "@typescript-eslint": tsPlugin },
+    settings: { "import/resolver": { typescript: { project: "./tsconfig.json" } } },
+    rules: { "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }] }
+  },
+  {
+    files: ["supabase/functions/**/*.ts"],
+    rules: { "import/no-unresolved": ["error", { ignore: ["^https://"] }] }
   }
 ];

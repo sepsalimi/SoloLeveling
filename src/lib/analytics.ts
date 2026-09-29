@@ -43,7 +43,7 @@ export function summarizeActivities(entries: ActivityEntry[], today = new Date()
     byCategory,
     byPurpose,
     soloMinutes: entries.filter((entry) => entry.socialContext === "solo").reduce((sum, entry) => sum + entry.durationMinutes, 0),
-    socialMinutes: entries.filter((entry) => entry.socialContext !== "solo").reduce((sum, entry) => sum + entry.durationMinutes, 0),
+    socialMinutes: entries.filter((entry) => entry.socialContext !== "solo" && entry.socialContext !== "unknown").reduce((sum, entry) => sum + entry.durationMinutes, 0),
     averageEfficiency: efficiencies.length
       ? Math.round(efficiencies.reduce((sum, value) => sum + value, 0) / efficiencies.length)
       : undefined,

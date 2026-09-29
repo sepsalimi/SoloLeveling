@@ -1,3 +1,4 @@
+import { ReminderNavigation } from "@/components/ReminderNavigation";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -10,6 +11,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <AppStateProvider>
           <StatusBar style="auto" />
+          <ReminderNavigation />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="auth" />
