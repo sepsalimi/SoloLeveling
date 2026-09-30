@@ -18,7 +18,7 @@ describe("task suggestions and workload", () => {
   it("extracts separate tasks, spoken durations, categories and priority without inventing hours", () => {
     const tasks = draftTasks("I need to pay my bill, high priority, fifteen minutes. Play games, low priority, two hours. Renew my passport");
     expect(tasks).toHaveLength(3);
-    expect(tasks[0]).toMatchObject({ category: "Finance", priority: "high", estimatedHours: 0.25 });
+    expect(tasks[0]).toMatchObject({ category: "Finances", priority: "high", estimatedHours: 0.25 });
     expect(tasks[1]).toMatchObject({ category: "Leisure", priority: "low", estimatedHours: 2 });
     expect(tasks[2]).toMatchObject({ category: "Life Admin", estimatedHours: null });
     expect(new Set(tasks.map(t => t.id)).size).toBe(3);
@@ -33,13 +33,13 @@ describe("task suggestions and workload", () => {
   it("excludes completed and unestimated tasks from the pie", () => {
     const tasks = draftTasks("Pay bills 1 hour. Budget 2 hours. Renew passport");
     tasks[1].status = "Done";
-    expect(plannedHours(tasks)).toEqual({ Finance: 1 });
+    expect(plannedHours(tasks)).toEqual({ Finances: 1 });
     expect(plannedHours([])).toEqual({});
   });
   it("keeps staple categories", () => {
     expect(categorizeTask("Renew passport")).toBe("Life Admin");
     expect(categorizeTask("Play a game")).toBe("Leisure");
-    expect(categorizeTask("Prepare taxes")).toBe("Finance");
+    expect(categorizeTask("Prepare taxes")).toBe("Finances");
   });
 });
 describe("Steam URL validation", () => {

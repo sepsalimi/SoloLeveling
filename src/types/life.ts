@@ -79,9 +79,9 @@ export type LifePlan = {
 };
 
 export type OrganizationResult = {
-  goals: Array<{ title: string; area: LifeArea }>;
-  projects: Array<{ title: string; area: LifeArea; goalTitles: string[] }>;
-  tasks: Array<{
+  goals: { title: string; area: LifeArea }[];
+  projects: { title: string; area: LifeArea; goalTitles: string[] }[];
+  tasks: {
     title: string;
     area: LifeArea;
     projectTitle: string | null;
@@ -93,7 +93,7 @@ export type OrganizationResult = {
     dueDate: string | null;
     dueDateSource: ValueSource | null;
     recurrence: TaskRecurrence | null;
-  }>;
+  }[];
   contextNotes: string[];
   clarificationQuestion: string | null;
 };

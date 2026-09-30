@@ -17,6 +17,16 @@ import { loadLifePlan, saveLifePlan } from "@/services/taskStore";
 
 export default function CheckInScreen() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const [initialAnchor] = useState(() => {
+    const initialTimezone = systemTimeZone();
+    const initialCapturedAt = new Date().toISOString();
+    return {
+      id: `evening-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      timezone: initialTimezone,
+      capturedAt: initialCapturedAt,
+      date: dateInTimeZone(new Date(initialCapturedAt), initialTimezone),
+    };
+  });
   const [tab, setTab] = useState(mode === "morning" ? "morning" : "evening");
   const [text, setText] = useState("");
   const [interim, setInterim] = useState("");
@@ -30,10 +40,10 @@ export default function CheckInScreen() {
   const [message, setMessage] = useState("");
   const [question, setQuestion] = useState("");
   const [planCues, setPlanCues] = useState<ActivityCue[]>([]);
-  const sessionId = useRef("evening-" + Date.now() + "-" + Math.random().toString(36).slice(2));
-  const timezone = useRef(systemTimeZone());
-  const capturedAt = useRef(new Date().toISOString());
-  const date = useRef(dateInTimeZone(new Date(capturedAt.current), timezone.current));
+  const sessionId = useRef(initialAnchor.id);
+  const timezone = useRef(initialAnchor.timezone);
+  const capturedAt = useRef(initialAnchor.capturedAt);
+  const date = useRef(initialAnchor.date);
   const saveLock = useRef(false);
   const { preferences, saveEvening, storageError } = useAppState();
   const cues = useMemo(() => {

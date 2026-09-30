@@ -1,12 +1,12 @@
 // Tenant-scoped local planning storage with explicit, idempotent account synchronization.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { migrateLifePlan } from "@/lib/lifePlan";
+import { taskStorageKey } from "@/lib/storageKeys";
 import { emptyLifePlan, LifePlan, LifeTask } from "@/types/life";
 import { checkInScope } from "./dailyCheckIns";
 import { supabase } from "./supabase";
 
 const legacyKey = "life.analytics.tasks";
-export const taskStorageKey = (scope: string) => `life.analytics.plan.v2:${scope}`;
 
 async function currentScope() {
   return checkInScope();

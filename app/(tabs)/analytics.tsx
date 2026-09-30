@@ -24,7 +24,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { EmptyState } from "@/components/EmptyState";
 import { router } from "expo-router";
 
-const periods: Array<AnalyticsPeriod | "custom"> = ["today", "week", "month", "ytd", "custom"];
+const periods: (AnalyticsPeriod | "custom")[] = ["today", "week", "month", "ytd", "custom"];
 const chartColors = [palette.teal, palette.clay, palette.gold, palette.rose, palette.mint];
 
 export default function AnalyticsScreen() {

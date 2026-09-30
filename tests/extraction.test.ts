@@ -20,7 +20,7 @@ describe("production extraction", () => {
             startTime: "09:00",
             endTime: "11:00",
             durationMinutes: 120,
-            primaryCategory: "work",
+            primaryCategory: "Career",
             socialContext: "solo",
             purposeTags: ["productive"],
             efficiencyPercent: 80,

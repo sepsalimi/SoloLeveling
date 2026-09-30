@@ -19,6 +19,7 @@ export default function SettingsScreen() {
   if (!preferences) return null;
 
   async function update<K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) {
+    if (!preferences) return;
     await updatePreferences({ ...preferences, [key]: value });
   }
 

@@ -24,7 +24,6 @@ export default function RootLayout() {
             <Stack.Screen name="auth" />
             <Stack.Screen name="reset-password" />
             <Stack.Screen name="onboarding" />
-            <Stack.Screen name="review" />
             <Stack.Screen name="(tabs)" />
           </Stack>
         </AppStateProvider>
@@ -35,7 +34,7 @@ export default function RootLayout() {
 
 function AuthLinkHandler() {
   const url = Linking.useURL();
-  const handled = useRef<string>();
+  const handled = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!url || !supabase || handled.current === url) return;

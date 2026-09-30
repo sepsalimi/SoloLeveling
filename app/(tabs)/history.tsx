@@ -5,6 +5,7 @@ import { ActivityCard } from "@/components/ActivityCard";
 import { ActivityEditor } from "@/components/ActivityEditor";
 import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
+import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Input } from "@/components/Input";
 import { Screen } from "@/components/Screen";

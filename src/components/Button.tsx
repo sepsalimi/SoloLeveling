@@ -4,7 +4,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Text } from "@/components/Text";
 import { palette, surfaces } from "@/theme/colors";
-import { fonts } from "@/theme/typography";
 
 type Props = {
   label: string;

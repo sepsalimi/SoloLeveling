@@ -16,8 +16,8 @@ export function LifeCapture({ plan, onPlan }: { plan: LifePlan; onPlan: (plan: L
   const [question, setQuestion] = useState<string>();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [conversationId] = useState(() => `life-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const textRef = useRef("");
-  const conversationId = useRef(`life-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const dark = useColorScheme() === "dark";
 
   function changeText(value: string) {
@@ -33,7 +33,7 @@ export function LifeCapture({ plan, onPlan }: { plan: LifePlan; onPlan: (plan: L
     try {
       const transcript = question ? `Assistant asked: ${question}\nUser answered: ${words}` : words;
       const result = await organizeLife({
-        conversationId: conversationId.current,
+        conversationId,
         transcript,
         timezone: systemTimeZone(),
         plan,

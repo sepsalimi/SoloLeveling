@@ -53,7 +53,7 @@ export type CheckInSession = {
   transcripts: string[];
   entries: ActivityEntry[];
   unresolvedIssues: string[];
-  untimedActivities?: Array<{
+  untimedActivities?: {
     id: string;
     title: string;
     category: ActivityCategory;
@@ -63,7 +63,7 @@ export type CheckInSession = {
     projectId?: string;
     taskId?: string;
     outcome: "completed" | "partial";
-  }>;
+  }[];
   processingModel?: string;
 };
 

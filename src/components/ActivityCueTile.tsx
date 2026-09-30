@@ -1,9 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, View } from "react-native";
 import { ActivityCue } from "@/lib/checkIn";
 import { Text } from "./Text";
 export function ActivityCueTile({ cue, heard, width }: { cue: ActivityCue; heard: boolean; width: number }) {
-  const opacity = useRef(new Animated.Value(heard ? 0.48 : 1)).current;
+  const [opacity] = useState(() => new Animated.Value(heard ? 0.48 : 1));
   useEffect(() => {
     Animated.timing(opacity, { toValue: heard ? 0.48 : 1, duration: 240, useNativeDriver: true }).start();
   }, [heard, opacity]);

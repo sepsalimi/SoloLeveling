@@ -4,6 +4,7 @@ describe("Supabase RLS policies", () => {
   const migration = readFileSync("supabase/migrations/202607200001_initial_schema.sql", "utf8");
   const functionalMigration = readFileSync("supabase/migrations/202607280001_functional_mvp.sql", "utf8");
   const hardeningMigration = readFileSync("supabase/migrations/202608010001_check_in_hardening.sql", "utf8");
+  const lifeMigration = readFileSync("supabase/migrations/202609300001_life_model.sql", "utf8");
 
   it("enables RLS on personal tables", () => {
     for (const table of ["profiles", "user_preferences", "check_in_sessions", "voice_notes", "activity_entries"]) {
@@ -26,6 +27,13 @@ describe("Supabase RLS policies", () => {
   it("rejects completed check-in double submits", () => {
     expect(hardeningMigration).toContain("This check-in was already saved.");
     expect(hardeningMigration).toContain("activity_entries_user_session_idx");
+  });
+
+  it("isolates life plans and validates multi-day totals per actual date", () => {
+    expect(lifeMigration).toContain("alter table public.life_plans enable row level security");
+    expect(lifeMigration).toContain("auth.uid() = user_id");
+    expect(lifeMigration).toContain("group by value->>'activityDate'");
+    expect(lifeMigration).toContain("delete from public.life_plans where user_id = auth.uid()");
   });
 });
 
