@@ -19,6 +19,7 @@ Tasks include:
 Projects show active/overdue counts and completion progress. Shortcuts cover Inbox, Today, Tomorrow, Next 7 Days, and Completed.
 
 Recurring definitions stay active. Completing one dated occurrence preserves prior history and generates future occurrences.
+Completion uses a brief coral card pulse and small visual shake, with reduced-motion support. It never plays a sound.
 
 ## Deterministic task type
 
