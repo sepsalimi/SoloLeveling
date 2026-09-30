@@ -33,6 +33,8 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -40,7 +42,10 @@ jobs:
       - name: Export Expo web app
         run: pnpm export:web
         env:
-          EXPO_PUBLIC_DEMO_MODE: "true"
+          EXPO_PUBLIC_LOCAL_MODE: "true"
+
+      - name: Disable Jekyll for Expo assets
+        run: touch dist/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
@@ -48,6 +53,7 @@ jobs:
           path: dist
 
   deploy:
+    if: github.event_name == 'push'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

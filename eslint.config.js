@@ -3,8 +3,17 @@ const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
 
 module.exports = [
+  {
+    ignores: ["dist/**", "node_modules/**"]
+  },
   ...expoConfig,
   { ignores: ["dist/**", "node_modules/**", ".expo/**"] },
+  {
+    files: ["supabase/functions/**/*.ts"],
+    rules: {
+      "import/no-unresolved": "off"
+    }
+  },
   {
     files: ["**/*.ts", "**/*.tsx"],
     languageOptions: { parser: tsParser },

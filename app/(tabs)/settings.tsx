@@ -22,7 +22,63 @@ export default function SettingsScreen() {
 
   async function shareExport() {
     const data = await exportAllData();
-    await Share.share({ message: JSON.stringify(data, null, 2) });
+    await shareJsonExport(data);
+  }
+
+  function chooseExport() {
+    Alert.alert("Export data", "Choose an export format.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "JSON",
+        onPress: () => {
+          void exportJson().catch((error) =>
+            Alert.alert("Export failed", error instanceof Error ? error.message : "Try again.")
+          );
+        }
+      },
+      {
+        text: "CSV",
+        onPress: () => {
+          void shareCsvExport(activities).catch((error) =>
+            Alert.alert("Export failed", error instanceof Error ? error.message : "Try again.")
+          );
+        }
+      }
+    ]);
+  }
+
+  function confirmDeleteAccount() {
+    Alert.alert(localMode ? "Clear all local data?" : "Delete account permanently?", localMode
+      ? "This deletes all activities and preferences stored in this browser. This cannot be undone."
+      : "This deletes all activities, transcripts, retained audio, and your login. This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: localMode ? "Clear data" : "Delete permanently",
+        style: "destructive",
+        onPress: () => {
+          setBusy(true);
+          void deleteAccount()
+            .then(async () => {
+              await clearDraft();
+              router.replace(localMode ? "/onboarding" : "/auth");
+            })
+            .catch((error) => Alert.alert("Account deletion failed", error instanceof Error ? error.message : "Try again."))
+            .finally(() => setBusy(false));
+        }
+      }
+    ]);
+  }
+
+  async function handleLogOut() {
+    setBusy(true);
+    try {
+      await logOut();
+      router.replace("/auth");
+    } catch (error) {
+      Alert.alert("Could not log out", error instanceof Error ? error.message : "Try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -44,9 +100,12 @@ export default function SettingsScreen() {
           should not log transcripts, audio URLs, or personal activity content.
         </Text>
       </Card>
-      <Button label="Export data" icon="download-outline" onPress={shareExport} />
-      <Button label="Delete account" icon="warning-outline" variant="danger" onPress={() => Alert.alert("Delete account", "Use the Supabase RPC delete_user_data, then remove the auth user from an admin endpoint.")} />
-      <Button label="Log out" icon="log-out-outline" variant="ghost" onPress={() => router.replace("/auth")} />
+      <View style={styles.dataActions}>
+        <Text variant="eyebrow">Your data</Text>
+        <Button label="Take a copy" icon="download-outline" variant="secondary" onPress={chooseExport} disabled={busy} />
+        <Button label={localMode ? "Clear this browser" : "Delete my archive"} icon="warning-outline" variant="danger" onPress={confirmDeleteAccount} disabled={busy} />
+        {!localMode ? <Button label="Log out" icon="log-out-outline" variant="ghost" compact onPress={handleLogOut} disabled={busy} /> : null}
+      </View>
     </Screen>
   );
 }
@@ -54,13 +113,34 @@ export default function SettingsScreen() {
 function Toggle({ label, value, onValueChange }: { label: string; value: boolean; onValueChange: (value: boolean) => void }) {
   return (
     <View style={styles.toggle}>
-      <Text>{label}</Text>
-      <Switch value={value} onValueChange={onValueChange} />
+      <Text variant="label">{label}</Text>
+      <Switch
+        accessibilityLabel={label}
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: palette.line, true: palette.mint }}
+        thumbColor={value ? palette.forest : "#FFFFFF"}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  input: { minHeight: 48, borderWidth: 1, borderColor: palette.line, borderRadius: 8, paddingHorizontal: 12, fontSize: 16 },
-  toggle: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 }
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  intro: { gap: 9, marginTop: 8 },
+  lede: { color: palette.muted, fontSize: 17, lineHeight: 25 },
+  sectionTitle: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 },
+  timeRow: { flexDirection: "row", gap: 12 },
+  timeField: { flex: 1, gap: 7 },
+  days: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  day: { minHeight: 40, justifyContent: "center", borderRadius: 14, paddingHorizontal: 12 },
+  dayActive: { transform: [{ rotate: "-2deg" }] },
+  dayText: { color: palette.muted, fontSize: 12, fontWeight: "700" },
+  dayTextActive: { color: "#FFFFFF", fontSize: 13 },
+  toggleList: { gap: 0 },
+  toggle: { minHeight: 60, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: palette.line },
+  privacy: { marginTop: 10 },
+  inverse: { color: "#FFFFFF" },
+  inverseBody: { color: "#D6E4DE", lineHeight: 23 },
+  dataActions: { gap: 10, marginTop: 8 }
 });

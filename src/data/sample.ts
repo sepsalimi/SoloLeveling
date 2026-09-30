@@ -12,7 +12,8 @@ export const defaultPreferences: UserPreferences = {
   efficiencyEnabled: true,
   moodEnabled: true,
   retainAudio: false,
-  notificationsEnabled: false
+  notificationsEnabled: false,
+  onboardingCompleted: false
 };
 
 export const sampleActivities: ActivityEntry[] = [

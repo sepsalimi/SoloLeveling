@@ -3,20 +3,25 @@ import { router } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
+import { Button } from "@/components/Button";
 import { useAppState } from "@/context/AppState";
 
 export default function Index() {
-  const { ready } = useAppState();
+  const { authReady, dataReady, error, preferences, refresh, user } = useAppState();
 
   useEffect(() => {
-    if (ready) router.replace("/auth");
-  }, [ready]);
+    if (!authReady || (user && !dataReady) || (error && user)) return;
+    if (!user) router.replace("/auth");
+    else if (!preferences?.onboardingCompleted) router.replace("/onboarding");
+    else router.replace("/(tabs)/home");
+  }, [authReady, dataReady, error, preferences?.onboardingCompleted, user]);
 
   return (
     <Screen scroll={false}>
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16 }}>
         <ActivityIndicator />
-        <Text>Preparing your private timeline...</Text>
+        <Text>{error ?? "Preparing your private timeline..."}</Text>
+        {error && user ? <Button label="Try again" icon="refresh-outline" onPress={() => void refresh()} /> : null}
       </View>
     </Screen>
   );

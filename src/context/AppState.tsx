@@ -1,10 +1,12 @@
-import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import { ActivityEntry, CheckInSession, UserPreferences } from "@/types/activity";
 import { exportData, loadActivities, loadPreferences, loadSessions, saveActivities, savePreferences, saveSessions } from "@/services/localStore";
 import { loadDailyCheckIns, persistDailyCheckIn, syncDailyCheckIns } from "@/services/dailyCheckIns";
 import { supabase } from "@/services/supabase";
 
 type AppStateValue = {
+  user: User | null;
   activities: ActivityEntry[];
   sessions: CheckInSession[];
   preferences?: UserPreferences;
@@ -17,6 +19,8 @@ type AppStateValue = {
   syncCheckIns: () => Promise<void>;
   updatePreferences: (preferences: UserPreferences) => Promise<void>;
   exportAllData: () => Promise<unknown>;
+  logOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 };
 const AppStateContext = createContext<AppStateValue | undefined>(undefined);
 export function AppStateProvider({ children }: PropsWithChildren) {

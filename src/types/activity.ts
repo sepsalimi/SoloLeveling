@@ -31,6 +31,7 @@ export type PurposeTag = (typeof purposeTags)[number];
 
 export type ActivityEntry = {
   id: string;
+  sessionId?: string;
   title: string;
   description?: string;
   activityDate: string;
@@ -74,6 +75,7 @@ export type UserPreferences = {
   moodEnabled: boolean;
   retainAudio: boolean;
   notificationsEnabled: boolean;
+  onboardingCompleted: boolean;
 };
 
 export type AnalyticsPeriod = "today" | "week" | "month" | "ytd";

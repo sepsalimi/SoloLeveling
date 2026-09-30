@@ -1,6 +1,6 @@
 import { ActivityEntry } from "@/types/activity";
 
-export const transcriptFixtures: Array<{ transcript: string; expected: Partial<ActivityEntry> }> = [
+export const transcriptFixtures: { transcript: string; expected: Partial<ActivityEntry> }[] = [
   {
     transcript: "I worked from nine to eleven at around 80 percent efficiency.",
     expected: { primaryCategory: "work", durationMinutes: 120, efficiencyPercent: 80 }

@@ -1,4 +1,7 @@
-import OpenAI from "https://deno.land/x/openai@v4.69.0/mod.ts";
+// Converts an authenticated user's transcript into strictly structured activities.
+import { authenticateRequest } from "../_shared/auth.ts";
+import { parseExtractionResult } from "../_shared/extractionSchema.ts";
+import { enforceRateLimit } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,15 +27,15 @@ const schema = {
             activityDate: { type: "string" },
             startTime: { type: ["string", "null"] },
             endTime: { type: ["string", "null"] },
-            durationMinutes: { type: "integer" },
+            durationMinutes: { type: "integer", minimum: 1, maximum: 1440 },
             primaryCategory: { enum: ["work", "learning", "health", "exercise", "food", "chores", "social", "entertainment", "rest", "travel", "personal_care", "other"] },
             socialContext: { enum: ["solo", "with_partner", "with_family", "with_friends", "with_coworkers", "public", "unknown"] },
             purposeTags: { type: "array", items: { enum: ["productive", "fun", "recovery", "necessary", "growth"] } },
-            efficiencyPercent: { type: ["integer", "null"] },
-            energyLevel: { type: ["integer", "null"] },
-            mood: { type: ["integer", "null"] },
-            confidence: { type: "number" },
-            sourceTranscriptSegment: { type: ["string", "null"] },
+            efficiencyPercent: { type: ["integer", "null"], minimum: 0, maximum: 100 },
+            energyLevel: { type: ["integer", "null"], minimum: 1, maximum: 5 },
+            mood: { type: ["integer", "null"], minimum: 1, maximum: 5 },
+            confidence: { type: "number", minimum: 0, maximum: 1 },
+            sourceTranscriptSegment: { type: ["string", "null"], maxLength: 2000 },
             needsReview: { type: "boolean" }
           },
           required: ["id", "title", "description", "activityDate", "startTime", "endTime", "durationMinutes", "primaryCategory", "socialContext", "purposeTags", "efficiencyPercent", "energyLevel", "mood", "confidence", "sourceTranscriptSegment", "needsReview"]
@@ -47,34 +50,52 @@ const schema = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const openai = new OpenAI({ apiKey: Deno.env.get("OPENAI_API_KEY") });
+    const { user } = await authenticateRequest(req);
+    enforceRateLimit(`process-check-in:${user.id}`, 20, 60_000);
+
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
+
     const { transcript, existingActivities = [], activityDate = new Date().toISOString().slice(0, 10) } = await req.json();
     if (!transcript || typeof transcript !== "string") throw new Error("Missing transcript.");
+    if (new TextEncoder().encode(transcript).length > 200000) throw new Error("Transcript is too large to process.");
+    if (!Array.isArray(existingActivities) || existingActivities.length > 100) throw new Error("Invalid existing activities.");
 
-    const completion = await openai.chat.completions.create({
-      model: Deno.env.get("OPENAI_EXTRACTION_MODEL") ?? "gpt-4.1-mini",
-      response_format: { type: "json_schema", json_schema: schema },
-      messages: [
-        {
-          role: "system",
-          content:
-            "Extract personal activity entries from check-in transcripts. Normalize durations to minutes. Calculate duration from explicit start/end times. Never invent a duration. Mark uncertainty with needsReview. Avoid duplicates with existing activities. Return unresolved issues instead of asking follow-up questions."
-        },
-        {
-          role: "user",
-          content: JSON.stringify({ activityDate, transcript, existingActivities })
-        }
-      ]
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: Deno.env.get("OPENAI_EXTRACTION_MODEL") ?? "gpt-4.1-mini",
+        response_format: { type: "json_schema", json_schema: schema },
+        messages: [
+          {
+            role: "system",
+            content:
+              "Extract personal activity entries from check-in transcripts. Normalize durations to minutes and calculate them only from an explicit or reasonably implied range. Never invent a duration. If duration is unknown, do not create the activity; add a concise unresolved issue instead. Mark uncertainty with needsReview. Resolve relative dates using activityDate. Avoid duplicates with existing activities. Preserve useful user wording. Return unresolved issues instead of questions."
+          },
+          {
+            role: "user",
+            content: JSON.stringify({ activityDate, transcript, existingActivities })
+          }
+        ]
+      })
     });
+    if (!response.ok) throw new Error("The extraction provider rejected the request.");
 
-    const content = completion.choices[0]?.message?.content;
+    const completion = await response.json();
+    const content = completion.choices?.[0]?.message?.content;
     if (!content) throw new Error("No extraction output.");
-    return new Response(content, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const validated = parseExtractionResult(content);
+    return new Response(JSON.stringify(validated), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
+    const unauthorized = error instanceof Error && error.message === "Unauthorized";
+    const rateLimited = error instanceof Error && error.message.startsWith("Too many requests");
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 400,
+      status: unauthorized ? 401 : rateLimited ? 429 : 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
 });
-
