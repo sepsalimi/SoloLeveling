@@ -9,7 +9,7 @@ Native builds can schedule silent local notifications on selected weekdays. Noti
 ## Evening or anytime
 
 - Tap the microphone once to start and again to stop.
-- Browser recognition restarts through pauses and service session endings.
+- Browser recognition never reopens itself, avoiding browser/OS restart tones. If the service ends a session, captured words remain and the user can tap to continue.
 - Silence and timers never submit.
 - Only explicit Stop sends the completed turn to reasoning.
 - Backgrounding, permission loss, or persistent speech-service failure stops capture and explains the interruption.

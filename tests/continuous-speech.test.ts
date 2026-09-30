@@ -14,24 +14,25 @@ function setup() {
   const control = continuousSpeech(Speech, callbacks); control.start();
   return { control, callbacks };
 }
-it("restarts browser sessions without ending the user's recording", () => {
-  const { control, callbacks } = setup();
+it("preserves pending words and pauses without reopening or submitting", () => {
+  const { callbacks } = setup();
   Speech.instances[0].emit("I worked out for 30 minutes");
   Speech.instances[0].onend?.();
+  expect(callbacks.onFinal).toHaveBeenCalledWith("I worked out for 30 minutes");
   expect(callbacks.onStopped).not.toHaveBeenCalled();
-  vi.advanceTimersByTime(150);
-  expect(Speech.instances).toHaveLength(2);
-  Speech.instances[1].emit("and studied for an hour", true);
-  control.stop(); Speech.instances[1].onend?.();
-  expect(callbacks.onFinal.mock.calls.flat()).toEqual(["I worked out for 30 minutes", "and studied for an hour"]);
-  expect(callbacks.onStopped).toHaveBeenCalledTimes(1);
+  expect(callbacks.onError).toHaveBeenCalledWith("Voice connection paused. Your words are kept. Tap to continue or type.");
   vi.advanceTimersByTime(600000);
-  expect(Speech.instances).toHaveLength(2);
+  expect(Speech.instances).toHaveLength(1);
 });
-it("stops during a restart gap without restarting", () => {
+it("deduplicates a recovered fragment at a user-started session boundary", () => {
   const { control, callbacks } = setup();
-  Speech.instances[0].onend?.(); control.stop(); vi.advanceTimersByTime(5000);
-  expect(Speech.instances).toHaveLength(1); expect(callbacks.onStopped).toHaveBeenCalledTimes(1);
+  Speech.instances[0].emit("yesterday");
+  Speech.instances[0].onend?.();
+  control.start();
+  Speech.instances[1].emit("yesterday", true);
+  expect(callbacks.onFinal.mock.calls.flat()).toEqual(["yesterday"]);
+  control.stop(); Speech.instances[1].onend?.();
+  expect(callbacks.onStopped).toHaveBeenCalledTimes(1);
 });
 it("escapes a browser that never signals stop and retains partial words", () => {
   const { control, callbacks } = setup();
@@ -46,12 +47,17 @@ it("does not duplicate final results and preserves words on abort", () => {
   expect(callbacks.onFinal).toHaveBeenCalledTimes(1);
   control.abort(); vi.advanceTimersByTime(600000); expect(callbacks.onStopped).not.toHaveBeenCalled();
 });
-it("retries silence but reports permission failure without looping", () => {
+it("does not restart after silence or network failure", () => {
   const { callbacks } = setup();
-  Speech.instances[0].onerror?.({ error: "no-speech" }); vi.advanceTimersByTime(150);
-  Speech.instances[1].onerror?.({ error: "not-allowed" }); vi.advanceTimersByTime(600000);
-  expect(Speech.instances).toHaveLength(2); expect(callbacks.onError).toHaveBeenCalledTimes(1);
+  Speech.instances[0].onerror?.({ error: "no-speech" });
+  vi.advanceTimersByTime(600000);
+  expect(Speech.instances).toHaveLength(1); expect(callbacks.onError).toHaveBeenCalledTimes(1);
   expect(callbacks.onStopped).not.toHaveBeenCalled();
+  const network = setup();
+  Speech.instances[1].onerror?.({ error: "network" });
+  vi.advanceTimersByTime(600000);
+  expect(Speech.instances).toHaveLength(2); expect(network.callbacks.onError).toHaveBeenCalledTimes(1);
+  expect(network.callbacks.onStopped).not.toHaveBeenCalled();
 });
 it("remains active after five minutes", () => {
   const { callbacks } = setup(); vi.advanceTimersByTime(600000);
