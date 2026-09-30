@@ -60,7 +60,8 @@ export default function HomeScreen() {
       {todaySessions.map((session) => (
         <Card key={session.id}>
           <Text>{session.sessionType} check-in</Text>
-          <Text variant="caption">{session.entries.length} activities · {session.status}</Text>
+          <Text variant="caption">{session.entries.length + (session.untimedActivities?.length ?? 0)} activities · {session.status}</Text>
+          {session.untimedActivities?.map((activity, index) => <Text key={index} variant="caption">{activity.title} · time not stated</Text>)}
         </Card>
       ))}
       <Text variant="heading">Recent activities</Text>
@@ -77,4 +78,3 @@ const styles = StyleSheet.create({
   metricCard: { flex: 1 },
   row: { flexDirection: "row", justifyContent: "space-between", gap: 16 }
 });
-

@@ -1,0 +1,3 @@
+project_id = "solo-leveling"
+[functions.reason-check-in]
+verify_jwt = false

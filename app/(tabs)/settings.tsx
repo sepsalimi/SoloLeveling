@@ -40,7 +40,7 @@ export default function SettingsScreen() {
       <Card>
         <Text variant="heading">Privacy</Text>
         <Text>
-          OpenAI transcription and extraction happen through Supabase Edge Functions. The mobile app never contains an OpenAI API key and
+          Activity processing uses DeepSeek through an authenticated Supabase Edge Function. Browser dictation uses your browser speech service. The app never contains a model API key and
           should not log transcripts, audio URLs, or personal activity content.
         </Text>
       </Card>

@@ -58,6 +58,8 @@ export type CheckInSession = {
   transcripts: string[];
   entries: ActivityEntry[];
   unresolvedIssues: string[];
+  untimedActivities?: Array<{ title: string; category: ActivityCategory; source: string }>;
+  processingModel?: string;
 };
 
 export type UserPreferences = {
@@ -75,4 +77,3 @@ export type UserPreferences = {
 };
 
 export type AnalyticsPeriod = "today" | "week" | "month" | "ytd";
-

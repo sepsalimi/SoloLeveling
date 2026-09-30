@@ -9,8 +9,8 @@ import { supabase } from "@/services/supabase";
 import { palette } from "@/theme/colors";
 
 export default function AuthScreen() {
-  const [email, setEmail] = useState("demo@example.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function authenticate(mode: "login" | "register") {
@@ -67,7 +67,7 @@ export default function AuthScreen() {
         <Button label="Reset password" icon="mail-outline" variant="ghost" onPress={resetPassword} />
       </Card>
       <Text variant="caption">
-        Demo mode is enabled when Supabase keys are absent. Production OpenAI requests are handled only by the Supabase Edge Function.
+        Demo mode is enabled when Supabase keys are absent. AI processing runs securely through Supabase Edge Functions.
       </Text>
     </Screen>
   );
@@ -85,4 +85,3 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF"
   }
 });
-
