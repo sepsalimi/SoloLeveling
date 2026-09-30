@@ -85,7 +85,8 @@ export async function handleRequest(req: Request) {
       model,
     });
   } catch (error) {
-    const rateLimited = error instanceof Error && error.message.startsWith("Too many requests");
+    const message = error && typeof error === "object" && "message" in error ? String(error.message) : "";
+    const rateLimited = message.startsWith("Too many requests");
     return reply(
       { error: rateLimited ? "Too many check-ins were submitted. Wait a moment and retry." : "Processing did not finish. Your transcript is safe; please retry." },
       rateLimited ? 429 : 502,

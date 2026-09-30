@@ -99,7 +99,8 @@ export async function handleRequest(req: Request) {
     if (!result.contextNotes.every((note: unknown) => shortText(note, 500))) throw new Error("Invalid output");
     return reply({ ...result, model });
   } catch (error) {
-    const rateLimited = error instanceof Error && error.message.startsWith("Too many requests");
+    const message = error && typeof error === "object" && "message" in error ? String(error.message) : "";
+    const rateLimited = message.startsWith("Too many requests");
     return reply(
       { error: rateLimited ? "Too many planning updates were submitted. Wait a moment and retry." : "Organization did not finish. Your words are safe; please retry." },
       rateLimited ? 429 : 502,
