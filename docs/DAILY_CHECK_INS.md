@@ -1,39 +1,38 @@
-# Morning and evening check-ins
+# Morning plans and voice check-ins
 
-Morning plans are opt-in through Settings > Your daily rhythm or onboarding. They suggest up to three unfinished tasks, ordered by priority, in-progress status, then estimated effort. Suggestions never become actual activity records.
+## Morning
 
-The evening flow supports a one-tap voice start, editable transcript, colourful topic tiles, and a quiet review after dictation. Interim browser recognition results drive live tile dimming; only finalized text is reviewed and saved. A faded tile means mentioned, not task completion. Negative and future statements are ignored by the rule-based matcher. Tile labels and matching phrases are editable in Settings. Ambiguous shared durations stay blank.
+Morning plans are optional. They select up to three unfinished tasks using hard deadlines, priority, recurring commitments, and work already in progress. Planned hours remain estimates and never become actual activity records.
 
-Records include date, actual duration in minutes, title, category, and source transcript. Users confirm missing durations before saving. Dates use the device's local day. Saving updates analytics and History without mixing in planned hours.
+Native builds can schedule silent local notifications on selected weekdays. Notification content opens the current plan rather than embedding a stale task list. The static web app shows in-app prompts only; it does not claim background push support.
 
-## Storage
+## Evening or anytime
 
-- Web: IndexedDB database life-analytics-check-ins, with sessions and normalized activities stores.
-- Native: SQLite database life-analytics.db, with daily_check_ins and daily_activity_entries tables.
-- Saves are transactional and use stable IDs so retrying a save does not double count.
-- Signed-in records are scoped by account. Unsigned device records are kept separately and are not automatically uploaded when another person signs in.
-- Supabase sync needs migration 202609270001_daily_check_ins.sql. It defines account-owned tables, RLS, and the transactional save_daily_check_in RPC.
-- Cloud failures preserve the local database save; Settings provides Retry cloud sync.
-- Export includes daily check-in sessions and their activity records.
+- Tap the microphone once to start and again to stop.
+- Browser recognition restarts through pauses and service session endings.
+- Silence and timers never submit.
+- Only explicit Stop sends the completed turn to reasoning.
+- Backgrounding, permission loss, or persistent speech-service failure stops capture and explains the interruption.
+- Finalized words, original capture timestamp, timezone, and date anchor survive reload and retry.
+- Native recordings use Expo Audio and are deleted from temporary storage after transcription or cancellation.
 
-Apply the migration using the project's normal Supabase deployment process. It has not been applied to a live database by this change.
+The reasoning output supports several historical dates in one turn. `recordedAt` remains the original capture timestamp while each timed or untimed event has its own occurred date. Durations are checked independently per actual date.
 
-## Voice and reminders
+Plans, negated reports, and skipped activities are not logged. Partial progress does not complete a task. A clear untimed completion can complete its linked occurrence without adding invented minutes.
 
-Web live cues require browser SpeechRecognition support. Unsupported browsers have a text fallback. Native audio is transcribed after finishing through the existing transcribe-note function, so native tiles update after transcription, not live. Temporary native audio is deleted after transcription or cancellation. Recognition is currently English, and categorization is rule-based.
+## Live cues
 
-The app plays no chimes, spoken prompts, or haptics during recording. Foreground reminder banners are suppressed. Native scheduled reminders use silent notification content and an Android channel with no sound/vibration. Web reminders are in-app prompts while Today is open; the static site does not deliver background push notifications. Device reminder and microphone permission behavior still needs physical-device testing.
+Local cue matching drives the colorful carousel without a model call for every interim word. A cue can be completed, partial, skipped, or planned. Addressed cues fade but stay readable, and color is not the only state indicator.
 
-## Verification
+Task-derived cues augment the small default area set. Work and workout use separate matching rules. These cues are provisional; only validated server reasoning writes durable events.
 
-Type checking, unit tests, lint, and the Expo web export validate the implementation. Browser checks cover simulated interim/final speech, work versus workout matching, missing-duration review, IndexedDB persistence, reload, analytics totals, morning opt-in, and narrow-screen layout. Real microphone recognition and deployed Supabase synchronization require separate device/account validation.
+## Persistence
 
-## Phone capture update (2026-09-29)
+- Web: IndexedDB sessions and normalized timed activities.
+- Native: SQLite sessions and normalized timed activities.
+- Untimed events remain in the versioned session payload and are visible/editable in History.
+- Stable session and event IDs make retry idempotent.
+- Account scope is part of every local record key.
+- A failed cloud write leaves an explicit pending-sync message while preserving the local save.
 
-Evening check-in now uses a fixed-height screen. Tap the large microphone to start dictation; tap again to finish. Activity chips appear during capture and dim for recognized topics. Interim-only browser results are preserved for review. Send my check-in opens one activity at a time, then Save my day writes the existing dated session to storage. Keyboard users can activate the microphone with Space or Enter. Prefer to type remains available for denied permissions or unsupported browsers.
-
-Browser verification covers 390x844, 375x667, and 360x640 viewports with simulated speech, live cue matching, tap start/stop, interim retention, and saving. Real microphone recognition remains dependent on the phone browser and its permission/service availability.
-
-## Automatic processing update
-
-The evening title/minutes/category review form has been removed. Explicit Stop now submits to reason-check-in and saves validated model output automatically. Browser silence/session ends restart capture; permission or persistent network failures show an interruption. There is no five-minute recording cutoff. Missing durations remain untimed and do not inflate analytics. Setup: see DEEPSEEK_SETUP.md. No live DeepSeek calls are possible until the backend credentials are configured.
+The migration `202609300001_life_model.sql` updates the save RPC for multi-day events and per-date plausibility.

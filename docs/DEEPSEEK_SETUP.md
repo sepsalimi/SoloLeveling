@@ -1,31 +1,57 @@
-# DeepSeek setup for Life Analytics
+# DeepSeek reasoning setup
 
-GitHub Pages cannot hold a secret API key. The server function reason-check-in uses DeepSeek V4.1 Flash (deepseek-flash) with thinking enabled and high reasoning effort. No OpenAI key is needed for browser dictation.
+GitHub Pages never receives the provider key. Both reasoning functions authenticate the Supabase user before calling DeepSeek.
 
-## Account steps
+## Secrets and model
 
-1. Create a Supabase project at https://supabase.com/dashboard/projects. Keep its database password private.
-2. Create a DeepSeek API key at https://platform.deepseek.com/api_keys. The API account needs available credits; choose any purchase yourself.
-3. In your Supabase project, open Edge Functions → Secrets. Add DEEPSEEK_API_KEY with that key. Optionally set DEEPSEEK_MODEL=deepseek-flash. Do not put the DeepSeek key into GitHub Pages, EXPO_PUBLIC variables, browser storage, or chat.
-4. Send the assistant your Supabase project URL and publishable (or legacy anon) key. These are public client configuration, not the secret/service-role key.
+Set these Supabase Edge Function secrets:
 
-## Deployment connection
+```bash
+supabase secrets set DEEPSEEK_API_KEY=<provider-key>
+supabase secrets set DEEPSEEK_MODEL=deepseek-v4-flash
+```
 
-To let GitHub deploy the prepared function, create a Supabase personal access token at https://supabase.com/dashboard/account/tokens and put it directly into the repository's Actions secret SUPABASE_ACCESS_TOKEN:
-https://github.com/sepsalimi/SoloLeveling/settings/secrets/actions
+`DEEPSEEK_MODEL` is optional. The September 2026 official API documents `deepseek-v4-flash` and `deepseek-v4-pro`; legacy `deepseek-chat` and `deepseek-reasoner` names are retired. The functions use Chat Completions with:
 
-Add repository variables SUPABASE_PROJECT_REF, EXPO_PUBLIC_SUPABASE_URL, and EXPO_PUBLIC_SUPABASE_ANON_KEY (the public publishable/anon key). The assistant can set these public variables from the project URL and public key.
+- `thinking: { "type": "enabled" }`
+- `reasoning_effort: "high"`
+- JSON object response format
 
-Run Deploy DeepSeek reasoning backend, then Publish phone preview. The backend workflow deploys only the authenticated reasoning function, not the database. It does not deploy or expose older example functions.
+Reasoning traces are discarded server-side.
 
-Create an app account from /SoloLeveling/auth/ and verify the confirmation email. Set the Supabase Auth site URL to https://sepsalimi.github.io/SoloLeveling/ first. For a private preview, invite your own account and disable public signups.
+## Client configuration
 
-Successful processing saves dated activities to the existing on-device database immediately. Cloud sync additionally needs the SQL migrations in supabase/migrations applied to the new project; keep that separate from function deployment and preserve existing data if using an existing project.
+Set GitHub repository variables:
 
-## Behavior
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_PROJECT_REF`
 
-Tap to start, tap to stop. Browser silence/session endings restart dictation without submitting the check-in. Only explicit Stop triggers automatic AI processing and saving. Permission loss, repeated network failures, leaving the screen, or backgrounding the app can interrupt recording; captured text stays available.
+Set the repository Actions secret `SUPABASE` to a Supabase personal access token. The backend workflow maps it to `SUPABASE_ACCESS_TOKEN`.
 
-No manual title/minutes/category review is required. Missing durations are retained as untimed activities in the session payload and are excluded from time totals. The model response is validated; invalid or incomplete output is never saved as success.
+Configure the Supabase Auth site URL and allowed redirect URLs for:
 
-Without backend configuration or sign-in, the transcript remains a local draft with a retry message. No rule-based substitute is presented as DeepSeek output.
+```text
+https://sepsalimi.github.io/SoloLeveling/
+```
+
+## Deployment
+
+Run the `Deploy DeepSeek reasoning backend` workflow. It deploys:
+
+- `reason-life`: conversational goals/projects/tasks
+- `reason-check-in`: dated actual activities and task progress
+
+Both use `--no-verify-jwt` at the gateway because the function performs explicit user validation against `/auth/v1/user`.
+
+The workflow does not apply SQL. Review and apply migrations separately.
+
+## Required live checks
+
+1. Sign in with a confirmed account.
+2. Submit the onboarding scenario and verify linked goals, projects, tasks, provenance, and null optional dates.
+3. Submit a multi-day check-in and verify Sep 28/29/30 records from a Sep 30 local anchor.
+4. Retry the same session and confirm no duplicate records.
+5. Sign in as a second account and verify no first-account plan or check-in is visible.
+
+Provider credit, email redirect configuration, remote migration state, and physical microphone behavior cannot be inferred from a successful function deployment.

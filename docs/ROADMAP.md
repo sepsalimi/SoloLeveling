@@ -1,30 +1,23 @@
-# Future Roadmap
+# Remaining work
 
-## Release readiness
+## External validation
 
-- Run the pgTAP suite against the target Supabase project and verify every migration on a copy of existing data.
-- Run the Maestro happy path on physical iOS and Android devices with development OpenAI credentials.
-- Add app-store signing, screenshots, privacy labels, crash reporting without personal content, and release monitoring.
-- Add an encrypted large-payload store for recoverable drafts if the application requires stronger device-at-rest protection than the operating-system sandbox.
-- Add server-side per-user AI quotas and abuse monitoring without transcript logging.
+- Confirm email redirect settings and run a signed-in `reason-life` plus `reason-check-in` request against the deployed DeepSeek account.
+- Review and apply all Supabase migrations to project `llfaamdiscrmurexamem`, then verify account-to-account RLS with real users.
+- Verify native Expo Audio capture, temporary-file deletion, notification permissions, timezone changes, disabled schedules, and missed days on physical iOS and Android phones.
 
-## Product follow-ups
+## Product follow-up
 
-- Optional transcript deletion immediately after review.
-- More flexible split controls for unequal durations and field-specific merge choices.
-- Downloadable PDF summaries.
-- User-defined categories while preserving the standard analytics taxonomy.
-- Offline text draft queue with explicit foreground synchronization.
+- Add a background web-push service if installed-PWA reminders are required. The current web build intentionally promises only in-app reminders.
+- Add direct voice correction commands for existing saved entities beyond merge-by-title updates.
+- Add richer calendar navigation and project/task drill-down from analytics.
+- Add explicit available-capacity preferences to morning planning.
+- Add conflict resolution for simultaneous edits from two devices. Current document sync uses `updatedAt` and last-write semantics.
+- Add a first-party account UI for inspecting pending sync records.
 
-## Intentionally out of scope
+## Operational follow-up
 
-- Apple Health and Health Connect
-- Smartwatch integrations
-- Sleep and calorie tracking
-- Food photography
-- Location and calendar access
-- Social sharing, friends, and leaderboards
-- AI therapy or life coaching
-- Subscriptions
-- Passive monitoring or background recording
-- A single overall “life score”
+- Deploy the current Pages artifact from `codex/phone-preview-20260928`.
+- Deploy both reasoning functions.
+- Apply the additive life-model migration only after remote schema inspection and backup review.
+- Retire older OpenAI example functions if production confirms they are unused.

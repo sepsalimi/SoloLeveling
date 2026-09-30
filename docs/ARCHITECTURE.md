@@ -1,105 +1,68 @@
 # Architecture
 
-## Product boundary
+## Domain model
 
-Life Analytics is a native-first Expo application. It records only while its recording screen is active and stores production account data in Supabase. There is no client-side OpenAI key.
+`src/types/life.ts` defines the versioned planning document:
 
-The temporary GitHub Pages deployment enables `EXPO_PUBLIC_LOCAL_MODE=true`. This explicit runtime has no account or sample data, persists only in the current browser, uses deterministic text extraction, and disables voice transcription.
+- broad life areas
+- goals and linked projects
+- tasks with priority, planned hours, optional due date, provenance, and recurrence
+- dated task occurrences with independent completion history
+- retained context notes
 
-## Client
+`src/types/activity.ts` defines actual activity events. Timed and untimed events retain `recordedAt` separately from the date on which the activity occurred. Activities may link to a known task or project and record completed versus partial progress.
 
-Expo Router owns navigation:
+Legacy Finance and activity categories are normalized by `src/lib/areas.ts`, `src/lib/lifePlan.ts`, and `src/lib/sessionMigration.ts`.
 
-- `auth` and `reset-password` handle account access.
-- `onboarding` stores initial preferences and schedules reminders.
-- `(tabs)/check-in` records or accepts text and processes follow-up notes.
-- `review` edits and approves the active draft.
-- `home`, `analytics`, and `history` query the hydrated account state.
-- `settings` manages reminders, privacy choices, export, logout, and deletion.
+## Planning pipeline
 
-`AppStateProvider` restores the Supabase session and hydrates activities, sessions, and preferences through `dataRepository.ts`. Supabase remains the production source of truth. In temporary local mode, the same state interface uses empty AsyncStorage collections.
+1. `src/components/LifeCapture.tsx` accepts explicit-stop voice input or text.
+2. `src/services/reasoning.ts` sends a bounded copy of active context to `reason-life`.
+3. The function authenticates the bearer session, calls the server-configured DeepSeek model, and validates the returned goals, projects, tasks, inference provenance, dates, and recurrence.
+4. `src/lib/reasoningContracts.ts` validates the response again on the client.
+5. `src/lib/lifePlan.ts` resolves links against stable local identities and merges retries idempotently.
+6. `src/services/taskStore.ts` saves to a tenant-scoped local key and syncs the signed-in plan through RLS.
 
-`CheckInDraftProvider` retains one unfinished session across the recording and review routes. AsyncStorage is used only for interrupted draft recovery, never as the production activity database. Native authentication tokens use SecureStore; web tokens use browser-compatible AsyncStorage.
-
-Domain calculations remain in `src/lib`:
-
-- `analytics.ts`: periods, comparisons, category and social totals, efficiency, effective focused time, and chart series.
-- `duration.ts`: explicit clock and duration normalization used by fixtures.
-- `duplicates.ts`: same-day duplicate detection.
-- `validation.ts`: the client boundary for strict model output and activity edits.
+The deterministic task bucket formula remains in `src/lib/tasks.ts`; the model never chooses those labels.
 
 ## Check-in pipeline
 
-### Text
+1. `src/components/TaskVoice.tsx` uses browser SpeechRecognition on web and Expo Audio on native.
+2. Browser recognition restarts after service session endings. Silence does not submit. Background, permission, or connection interruption stops capture and preserves finalized text.
+3. `src/services/checkInDraft.ts` stores the transcript, capture timestamp, local date, timezone, session identity, and clarification question under the active account/device scope.
+4. `reason-check-in` resolves corrections and relative dates, excludes negative/future reports, retains untimed events, and checks plausibility per actual date.
+5. The client validates returned dates and linked identifiers before `src/lib/automaticCheckIn.ts` creates stable activity IDs.
+6. Web saves use IndexedDB; native saves use SQLite. Retry replaces the same session rather than appending duplicates.
+7. Signed-in saves sync through `save_daily_check_in`. Task completion updates the dated occurrence while partial work moves the linked task to In Progress.
 
-1. Create or reuse a `check_in_sessions` draft.
-2. Insert a processing `voice_notes` record representing the submitted note.
-3. Invoke `process-check-in` with the new transcript and current draft activities.
-4. Validate nullable Structured Output fields with Zod and deduplicate all entries.
-5. Retain the transcript only when its UTF-8 size is at most 50 KB.
-6. Persist the updated draft locally and open review.
-
-### Voice
-
-1. `expo-audio` records in the application document directory for at most five minutes.
-2. The URI is attached to the local draft before network processing.
-3. If retention is enabled, upload the file to the private `voice-notes` bucket.
-4. Send the foreground file to `transcribe-note`.
-5. Run the same extraction pipeline as text.
-6. Delete the local file after successful processing; preserve it after failure for explicit retry.
-
-No background upload or recording task is registered.
-
-## Review and persistence
-
-Review edits the complete `ActivityEntry` shape. Merge requires two selected entries; split requires one selected entry.
-
-Saving invokes `public.complete_check_in`. The Postgres function validates session ownership and replaces session activities plus the session status in one transaction. A failed insert rolls back the replacement.
-
-History uses ordinary RLS-scoped updates and deletes for individual activities.
-
-## Supabase
-
-Tables:
-
-- `profiles`
-- `user_preferences`
-- `check_in_sessions`
-- `voice_notes`
-- `activity_entries`
-
-An `auth.users` trigger creates profile and preference rows. Composite foreign keys prevent attaching notes or activities to another user's session.
-
-RLS is enabled on every personal table. The private Storage bucket checks that the first path segment equals `auth.uid()`.
-
-Edge Functions:
-
-- `transcribe-note`: authenticated multipart audio transcription.
-- `process-check-in`: authenticated strict activity extraction.
-- `delete-account`: authenticated retained-audio and Auth user deletion.
-
-All functions keep platform JWT verification enabled in `supabase/config.toml` and independently resolve the user from the Authorization header.
-
-## Transcript and audio retention
-
-- `retain_audio=false`: audio is transcribed directly and not uploaded to Storage.
-- `retain_audio=true`: audio is stored at `<user-id>/<note-id>.m4a`.
-- Full transcripts larger than 50 KB are processed but stored as `null`.
-- Model-provided source segments are limited by the schema and database.
+Local live cue matching is intentionally cheap and provisional. Durable records come only from validated reasoning output.
 
 ## Analytics
 
-Analytics are computed on the client from hydrated activity rows. Period helpers produce current and previous equivalent ranges using local calendar dates. “Social” includes explicit partner, family, friend, and coworker contexts; `public` and `unknown` are not silently classified as social.
+`src/lib/analytics.ts` aggregates saved timed events only. It:
 
-Effective focused time is calculated only for productive activities:
+- normalizes each event to one broad area for a mutually exclusive breakdown
+- calculates unknown/untracked capacity across the full selected date range
+- does not assume 100 percent efficiency when none was reported
+- keeps purpose tags separate because overlapping tags are not a partition
+- leaves untimed completions visible in History without adding zero or fabricated minutes
 
-```text
-durationMinutes × ((efficiencyPercent ?? 100) / 100)
-```
+Planned task hours appear only in the planner chart.
 
-## Verification
+## Isolation and security
 
-- Vitest covers domain calculations, validation, deduplication, extraction boundaries, and migration declarations.
-- Jest Expo and React Native Testing Library cover text check-in and activity editing components.
-- pgTAP exercises cross-user RLS against local Supabase.
-- Maestro defines the authenticated native happy path.
+- Local task, preference, legacy activity, session, and draft keys are scoped by Supabase user ID or the anonymous device scope.
+- Anonymous data is never silently attached to a later account.
+- Supabase tables use RLS with `auth.uid()`.
+- Edge functions authenticate the bearer session before paid inference.
+- The client validates model dates and only accepts task/project IDs from the supplied account context.
+- API keys and reasoning traces never return to the client.
+- Native Supabase sessions use encrypted AsyncStorage payloads with their encryption key in SecureStore.
+
+## Deployment
+
+The product source is `codex/phone-preview-20260928`.
+
+- `pages.yml` checks out that branch, runs typecheck/tests/export, prepares route shells, and publishes GitHub Pages.
+- `deploy-reasoning.yml` checks out that branch and deploys `reason-check-in` plus `reason-life`.
+- SQL migrations are reviewed and applied separately; function deployment never mutates the database.
