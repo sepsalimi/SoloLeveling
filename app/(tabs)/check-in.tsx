@@ -14,6 +14,7 @@ import { useAppState } from "@/context/AppState";
 import { applyCheckInToPlan, processEvening } from "@/services/reasoning";
 import { readDraft, writeDraft } from "@/services/checkInDraft";
 import { loadLifePlan, saveLifePlan } from "@/services/taskStore";
+import { agentDebug } from "@/lib/agentDebug";
 
 export default function CheckInScreen() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
@@ -83,8 +84,11 @@ export default function CheckInScreen() {
     void writeDraft({ id: sessionId.current, date: date.current, capturedAt: capturedAt.current, timezone: timezone.current, text: value, clarificationQuestion: question || undefined })
       .catch(() => setMessage("Could not back up your draft. Keep this page open."));
   }
-  async function process() {
+  async function process(source: "voice-stop" | "manual") {
     const words = transcript.current.trim();
+    // #region agent log
+    agentDebug({ hypothesisId: "C", location: "check-in.tsx:process", message: "Check-in processing requested", data: { source, characterCount: words.length, wordCount: words ? words.split(/\s+/).length : 0, saveLocked: saveLock.current, voice, hasClarification: Boolean(question) } });
+    // #endregion
     if (!words || saveLock.current) {
       if (!words) setMessage("No words captured yet. Tap to speak again, or type.");
       return;
@@ -158,13 +162,13 @@ export default function CheckInScreen() {
               <Text numberOfLines={1} style={{ color: state ? "#D1CDD8" : "#211B30", fontWeight: "700", fontSize: small ? 12 : 14, lineHeight: small ? 18 : 20 }}>{state ? state.toUpperCase() : cue.emoji} · {cue.label}</Text>
             </View>;
           })}</ScrollView>
-          {saving ? <View style={{ alignItems: "center", gap: 16 }}><Ionicons name="sparkles" size={64} color="#C4B5FD" /><Text style={styles.subtitle}>Making sense of your day…</Text><Text style={styles.subtle}>Activities and time are saved automatically.</Text></View> : !restoring && <TaskVoice largeMicrophone compact onStateChange={setVoice} onInterim={setInterim} onComplete={() => void process()} onTranscript={part => changeText((transcript.current + " " + part).trim())} />}
+          {saving ? <View style={{ alignItems: "center", gap: 16 }}><Ionicons name="sparkles" size={64} color="#C4B5FD" /><Text style={styles.subtitle}>Making sense of your day…</Text><Text style={styles.subtle}>Activities and time are saved automatically.</Text></View> : !restoring && <TaskVoice largeMicrophone compact onStateChange={setVoice} onInterim={setInterim} onComplete={() => void process("voice-stop")} onTranscript={part => changeText((transcript.current + " " + part).trim())} />}
           <Text accessibilityLabel="Live transcript" numberOfLines={small ? 2 : 3} style={[styles.transcript, { minHeight: small ? 44 : 66 }]}>{text} {interim}</Text>
         </View>
         <View style={styles.footer}>
           {typing && !capturing && <TextInput accessibilityLabel="Evening transcript" value={text} onChangeText={changeText} editable={!capturing} multiline placeholder="What did you do, and for how long?" placeholderTextColor="#9A96AC" style={[styles.input, { height: small ? 66 : 90 }]} />}
           <View style={{ height: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          {!saving && !!text.trim() && action(question ? "Answer and continue" : message ? "Retry processing" : "Process my day  ↗", () => void process(), capturing || restoring)}
+          {!saving && !!text.trim() && action(question ? "Answer and continue" : message ? "Retry processing" : "Process my day  ↗", () => void process("manual"), capturing || restoring)}
           <Pressable accessibilityRole="button" disabled={capturing || saving} style={{ opacity: capturing || saving ? 0 : 1 }} onPress={() => setTyping(!typing)}><Text style={styles.link}>{typing ? "Close keyboard" : "Prefer to type?"}</Text></Pressable></View>
           <Text style={styles.privacy}>{capturing ? "Tap to finish · silent visual feedback" : "Just your voice. A little space to reflect."}</Text>
           {message.startsWith("Sign in") && action("Sign in", () => router.push("/auth"))}

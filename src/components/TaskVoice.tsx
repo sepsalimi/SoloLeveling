@@ -9,6 +9,7 @@ import { useFocusEffect } from "expo-router";
 import { Button } from "./Button";
 import { Text } from "./Text";
 import { supabase } from "@/services/supabase";
+import { agentDebug } from "@/lib/agentDebug";
 
 type VoiceState = "idle" | "recording" | "processing";
 export function TaskVoice({ onTranscript, onInterim, onStateChange, onComplete, largeMicrophone = false, compact = false, startLabel = "Tell me what’s on your mind", listeningHint = "Say each task, its priority, and the time you expect it to take." }: {
@@ -70,6 +71,9 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, onComplete, 
   }, [cancel]);
   useFocusEffect(useCallback(() => () => { void cancel(); }, [cancel]));
   async function finish() {
+    // #region agent log
+    agentDebug({ hypothesisId: "A", location: "TaskVoice.tsx:finish", message: "Explicit capture stop requested", data: { platform: Platform.OS, state, alreadyStopping: stopping.current, hasBrowserRecognition: Boolean(recognition.current), nativeActive: nativeActive.current, generation: generation.current } });
+    // #endregion
     if (stopping.current) return;
     stopping.current = true;
     if (recognition.current) { setState("processing"); recognition.current.stop(); return; }
@@ -94,6 +98,9 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, onComplete, 
     if (busy.current || state !== "idle") return;
     busy.current = true; stopping.current = false; setMessage("");
     const token = ++generation.current;
+    // #region agent log
+    agentDebug({ hypothesisId: "D", location: "TaskVoice.tsx:start", message: "Capture implementation selected", data: { platform: Platform.OS, token, path: Platform.OS === "web" ? "browser-speech-recognition" : "expo-audio", appAudioPlaybackRequested: false, appHapticRequested: false } });
+    // #endregion
     try {
       if (Platform.OS === "web") {
         const browser = globalThis as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };

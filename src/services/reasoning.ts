@@ -6,6 +6,7 @@ import { completeTaskOccurrence } from "@/lib/recurrence";
 import { validateOrganization } from "@/lib/reasoningContracts";
 import { CheckInSession } from "@/types/activity";
 import { LifePlan } from "@/types/life";
+import { agentDebug } from "@/lib/agentDebug";
 
 function planContext(plan: LifePlan) {
   return {
@@ -25,6 +26,9 @@ export async function processEvening(input: {
 }) {
   if (!supabase) throw new Error("Automatic processing is not connected yet. Your transcript is kept on this device.");
   const { data: auth, error: authError } = await supabase.auth.getSession();
+  // #region agent log
+  agentDebug({ hypothesisId: "C", location: "reasoning.ts:processEveningAuth", message: "Processing authentication gate evaluated", data: { hasAuthError: Boolean(authError), hasSession: Boolean(auth.session), transcriptLength: input.transcript.length } });
+  // #endregion
   if (authError || !auth.session) throw new Error("Sign in to process your check-in. Your transcript is kept.");
   const context = planContext(input.plan);
   const { data, error } = await supabase.functions.invoke("reason-check-in", {
