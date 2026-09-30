@@ -1,3 +1,4 @@
+// Runtime validation for editable activity records and legacy extraction responses.
 import { z } from "zod";
 import { activityCategories, purposeTags, socialContexts } from "@/types/activity";
 
@@ -15,7 +16,7 @@ export const activityEntrySchema = z.object({
   efficiencyPercent: z.number().int().min(0).max(100).nullish().transform((value) => value ?? undefined),
   energyLevel: z.number().int().min(1).max(5).nullish().transform((value) => value ?? undefined),
   mood: z.number().int().min(1).max(5).nullish().transform((value) => value ?? undefined),
-  confidence: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(1).optional(),
   sourceTranscriptSegment: z.string().max(2000).nullish().transform((value) => value ?? undefined),
   needsReview: z.boolean()
 });

@@ -16,35 +16,35 @@ const rules: Rule[] = [
   {
     keywords: ["worked", "work"],
     title: (text) => text.includes("presentation") ? "Client presentation" : "Focused work",
-    category: "work",
+    category: "Career",
     socialContext: (text) => text.includes("coworker") ? "with_coworkers" : "solo",
     purposeTags: ["productive"]
   },
   {
     keywords: ["gym", "exercise", "workout"],
     title: () => "Exercise",
-    category: "exercise",
+    category: "Health",
     socialContext: () => "public",
     purposeTags: ["growth", "recovery"]
   },
   {
     keywords: ["lunch", "dinner", "breakfast"],
     title: (text) => text.includes("lunch") ? "Lunch" : text.includes("breakfast") ? "Breakfast" : "Dinner",
-    category: "food",
+    category: "Health",
     socialContext: socialContext,
     purposeTags: ["necessary", "fun"]
   },
   {
     keywords: ["youtube", "movie", "watched"],
     title: (text) => text.includes("movie") ? "Movie" : "Entertainment",
-    category: "entertainment",
+    category: "Leisure",
     socialContext: socialContext,
     purposeTags: ["fun", "recovery"]
   },
   {
     keywords: ["cleaned", "cleaning", "chores"],
     title: () => "Household chores",
-    category: "chores",
+    category: "Life Admin",
     socialContext: () => "solo",
     purposeTags: ["necessary"]
   }
@@ -88,7 +88,7 @@ export async function extractLocalActivities(transcript: string, existing: Activ
       primaryCategory: rule.category,
       socialContext: rule.socialContext(segment),
       purposeTags: rule.purposeTags,
-      efficiencyPercent: rule.category === "work" && efficiencyMatch ? Number(efficiencyMatch[1]) : undefined,
+      efficiencyPercent: rule.category === "Career" && efficiencyMatch ? Number(efficiencyMatch[1]) : undefined,
       confidence: 0.75,
       sourceTranscriptSegment: segment,
       needsReview: true

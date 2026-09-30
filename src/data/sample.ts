@@ -1,3 +1,4 @@
+// Non-personal sample records used only by deterministic tests and local previews.
 import { ActivityEntry, CheckInSession, UserPreferences } from "@/types/activity";
 import { isoDate } from "@/lib/dates";
 
@@ -24,7 +25,7 @@ export const sampleActivities: ActivityEntry[] = [
     startTime: "09:00",
     endTime: "11:00",
     durationMinutes: 120,
-    primaryCategory: "work",
+    primaryCategory: "Career",
     socialContext: "solo",
     purposeTags: ["productive"],
     efficiencyPercent: 80,
@@ -39,7 +40,7 @@ export const sampleActivities: ActivityEntry[] = [
     title: "Lunch with Aya",
     activityDate: today,
     durationMinutes: 45,
-    primaryCategory: "food",
+    primaryCategory: "Health",
     socialContext: "with_friends",
     purposeTags: ["fun", "necessary"],
     confidence: 0.88,
@@ -50,7 +51,7 @@ export const sampleActivities: ActivityEntry[] = [
     title: "Gym",
     activityDate: today,
     durationMinutes: 50,
-    primaryCategory: "exercise",
+    primaryCategory: "Health",
     socialContext: "public",
     purposeTags: ["growth", "recovery"],
     confidence: 0.9,

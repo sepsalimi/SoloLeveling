@@ -1,3 +1,4 @@
+// Deterministic task classification and legacy offline drafting utilities.
 import { LifeTask, TaskCategory } from "../types/task";
 
 export function taskType(priority: string, hours: number | null | undefined): string {
@@ -9,7 +10,7 @@ export function taskType(priority: string, hours: number | null | undefined): st
 
 export function categorizeTask(title: string): TaskCategory {
   const rules: [TaskCategory, RegExp][] = [
-    ["Finance", /\b(budget|tax|taxes|invoice|bank|invest|investment|savings|debt|pay|payment|rent|bill|bills|finance)\b/i],
+    ["Finances", /\b(budget|tax|taxes|invoice|bank|invest|investment|savings|debt|pay|payment|rent|bill|bills|finance)\b/i],
     ["Health", /\b(doctor|dentist|exercise|gym|workout|therapy|health|medication|run|fitness)\b/i],
     ["Career", /\b(job|resume|cv|client|work|career|interview|business|meeting|proposal)\b/i],
     ["Learning", /\b(study|course|exam|learn|class|assignment|university|academia)\b/i],
@@ -41,7 +42,9 @@ export function draftTasks(transcript: string): LifeTask[] {
       title: title.replace(/^(?:I (?:need|want|have) to|I should)\s+/i, ""),
       category: categorizeTask(title),
       priority: low ? "low" : high ? "high" : "medium",
+      prioritySource: low || high ? "explicit" : "inferred",
       estimatedHours: hours > 0 ? Math.round(hours * 100) / 100 : null,
+      estimateSource: hours > 0 ? "explicit" : undefined,
       status: "To Do",
       createdAt: new Date().toISOString(),
     };

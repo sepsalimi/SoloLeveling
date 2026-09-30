@@ -1,29 +1,51 @@
-import { activityCategories, ActivityCategory, CheckInSession } from "../types/activity";
-export type ExtractedActivity = { title: string; minutes: number | null; category: ActivityCategory; source: string };
-export function validateExtraction(value: unknown): ExtractedActivity[] {
-  if (!value || typeof value !== "object" || !("activities" in value) || !Array.isArray(value.activities) || value.activities.length > 100) throw new Error("Invalid activity response.");
-  const items: ExtractedActivity[] = value.activities.map((a: unknown) => {
-    if (!a || typeof a !== "object") throw new Error("Invalid activity.");
-    const row = a as Record<string, unknown>;
-    if (typeof row.title !== "string" || !row.title.trim() || row.title.length > 200
-      || typeof row.source !== "string" || row.source.length > 12000
-      || !activityCategories.includes(row.category as ActivityCategory)
-      || !(row.minutes === null || (typeof row.minutes === "number" && Number.isInteger(row.minutes) && row.minutes >= 1 && row.minutes <= 1440))) throw new Error("Invalid activity fields.");
-    return { title: row.title.trim(), category: row.category as ActivityCategory, minutes: row.minutes as number | null, source: row.source };
-  });
-  if (items.reduce((sum, a) => sum + (a.minutes ?? 0), 0) > 1440) throw new Error("Activity durations exceed one day.");
-  return items;
+// Converts validated reasoning output into stable, retry-safe dated activity records.
+import { CheckInSession } from "../types/activity";
+import { defaultPurpose } from "./areas";
+import { CheckInReasoning, ReasonedActivity, validateCheckInReasoning } from "./reasoningContracts";
+
+export type ExtractedActivity = ReasonedActivity;
+
+export function validateExtraction(
+  value: unknown,
+  captureDate: string,
+  taskIds?: ReadonlySet<string>,
+  projectIds?: ReadonlySet<string>,
+): CheckInReasoning {
+  return validateCheckInReasoning(value, { captureDate, taskIds, projectIds });
 }
-export function automaticSession(id: string, date: string, transcript: string, items: ExtractedActivity[], model: string): CheckInSession {
+
+function stableId(sessionId: string, item: ReasonedActivity) {
+  const value = [item.occurredOn, item.title, item.source, item.taskId ?? "", item.projectId ?? ""].join("|").toLowerCase();
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index++) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${sessionId}-${(hash >>> 0).toString(36)}`;
+}
+
+export function automaticSession(
+  id: string,
+  captureDate: string,
+  capturedAt: string,
+  transcript: string,
+  items: ExtractedActivity[],
+  model: string,
+): CheckInSession {
   if (!items.length) throw new Error("No completed activities were found. Add what you did and try again.");
   const now = new Date().toISOString();
   return {
-    id, sessionDate: date, sessionType: "evening", status: "completed", createdAt: now, completedAt: now, transcripts: [transcript],
-    entries: items.filter(a => a.minutes !== null).map((a, i) => ({
-      id: id + "-" + i, title: a.title, activityDate: date, durationMinutes: a.minutes!, primaryCategory: a.category,
-      socialContext: "unknown", purposeTags: a.category === "work" ? ["productive"] : a.category === "learning" ? ["growth"] : a.category === "entertainment" ? ["fun"] : a.category === "rest" ? ["recovery"] : ["necessary"], confidence: 1, sourceTranscriptSegment: a.source, needsReview: false,
+    id, sessionDate: captureDate, sessionType: "evening", status: "completed", createdAt: capturedAt, completedAt: now, transcripts: [transcript],
+    entries: items.filter(a => a.minutes !== null).map((a) => ({
+      id: stableId(id, a), sessionId: id, title: a.title, activityDate: a.occurredOn, recordedAt: capturedAt,
+      durationMinutes: a.minutes!, primaryCategory: a.category, projectId: a.projectId, taskId: a.taskId,
+      outcome: a.outcome, socialContext: "unknown", purposeTags: defaultPurpose(a.category),
+      sourceTranscriptSegment: a.source, needsReview: false,
     })),
-    untimedActivities: items.filter(a => a.minutes === null).map(a => ({ title: a.title, category: a.category, source: a.source })),
+    untimedActivities: items.filter(a => a.minutes === null).map(a => ({
+      id: stableId(id, a), title: a.title, category: a.category, occurredOn: a.occurredOn, recordedAt: capturedAt,
+      source: a.source, projectId: a.projectId, taskId: a.taskId, outcome: a.outcome,
+    })),
     processingModel: model,
     unresolvedIssues: [],
   };

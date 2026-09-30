@@ -1,13 +1,7 @@
-export const taskCategories = ["Life Admin", "Leisure", "Finance", "Career", "Health", "Learning", "Creative", "Relationships"] as const;
+// Backward-compatible task exports backed by the shared life-planning model.
+import { lifeAreas } from "./life";
+
+export const taskCategories = lifeAreas;
+export type { LifeTask, Priority } from "./life";
 export type TaskCategory = (typeof taskCategories)[number];
-export type Priority = "low" | "medium" | "high";
-export type LifeTask = {
-  id: string;
-  title: string;
-  category: TaskCategory;
-  priority: Priority;
-  estimatedHours: number | null;
-  status: "To Do" | "In Progress" | "Done";
-  createdAt: string;
-};
 export const taskTypes = ["⚠️ No Hours Set", "🍒 Low Hanging", "🪨 Big Rock", "☕️ Nice to Do", "🐌 Time Sink", "⚠️ Unknown Priority"] as const;

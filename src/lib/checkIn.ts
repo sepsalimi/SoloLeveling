@@ -1,16 +1,33 @@
+// Fast local speech cues and deterministic morning-plan helpers; durable records come from reasoning output.
 import { ActivityCategory, ActivityEntry, CheckInSession } from "../types/activity";
 import { LifeTask } from "../types/task";
+import { defaultPurpose } from "./areas";
 export type ActivityCue = { id: string; label: string; emoji: string; color: string; category: ActivityCategory; aliases: string[] };
 export const defaultCues: ActivityCue[] = [
-  { id: "work", label: "Work", emoji: "💼", color: "#FFD447", category: "work", aliases: ["work", "worked", "office", "job", "shift"] },
-  { id: "workout", label: "Workout", emoji: "💪", color: "#FF6B9B", category: "exercise", aliases: ["workout", "worked out", "exercise", "exercised", "gym", "ran", "run", "walk", "walked", "swam"] },
-  { id: "peng", label: "P.Eng study", emoji: "📚", color: "#A998FF", category: "learning", aliases: ["p.eng", "p eng", "peng", "engineering exam"] },
-  { id: "admin", label: "Life Admin", emoji: "🏡", color: "#5DE2C5", category: "chores", aliases: ["cleaned", "cleaning", "laundry", "chores", "errands", "groceries", "bills", "admin"] },
-  { id: "leisure", label: "Leisure", emoji: "🎮", color: "#FFAC59", category: "entertainment", aliases: ["game", "games", "gaming", "played", "movie", "watched", "read"] },
-  { id: "people", label: "People", emoji: "💬", color: "#75C9FF", category: "social", aliases: ["friends", "family", "partner", "visited", "called"] },
-  { id: "rest", label: "Rest", emoji: "🌙", color: "#F3A5ED", category: "rest", aliases: ["slept", "sleep", "nap", "napped", "rested", "rest"] },
+  { id: "work", label: "Work", emoji: "W", color: "#FFD447", category: "Career", aliases: ["work", "worked", "office", "job", "shift"] },
+  { id: "workout", label: "Workout", emoji: "H", color: "#FF6B9B", category: "Health", aliases: ["workout", "worked out", "exercise", "exercised", "gym", "ran", "run", "walk", "walked", "swam"] },
+  { id: "peng", label: "P.Eng study", emoji: "L", color: "#A998FF", category: "Learning", aliases: ["p.eng", "p eng", "peng", "engineering exam"] },
+  { id: "admin", label: "Life Admin", emoji: "A", color: "#5DE2C5", category: "Life Admin", aliases: ["cleaned", "cleaning", "laundry", "chores", "errands", "groceries", "bills", "admin"] },
+  { id: "leisure", label: "Leisure", emoji: "R", color: "#FFAC59", category: "Leisure", aliases: ["game", "games", "gaming", "played", "movie", "watched", "read"] },
+  { id: "people", label: "People", emoji: "P", color: "#75C9FF", category: "Relationships", aliases: ["friends", "family", "partner", "visited", "called"] },
+  { id: "rest", label: "Rest", emoji: "Z", color: "#F3A5ED", category: "Leisure", aliases: ["slept", "sleep", "nap", "napped", "rested", "rest"] },
 ];
+const taskCueColors = ["#FFD447", "#FF7F6E", "#67D7BE", "#A998FF"];
+export function taskActivityCues(tasks: LifeTask[]): ActivityCue[] {
+  return tasks
+    .filter((task) => task.status !== "Done" && (task.status === "In Progress" || task.recurrence || task.dueDate))
+    .slice(0, 4)
+    .map((task, index) => ({
+      id: `task:${task.id}`,
+      label: task.title,
+      emoji: "T",
+      color: taskCueColors[index % taskCueColors.length],
+      category: task.category,
+      aliases: [task.title, ...task.title.toLowerCase().split(/\s+/).filter((word) => word.length > 4)],
+    }));
+}
 export type HeardActivity = { key: string; title: string; cueId?: string; category: ActivityCategory; minutes: number | null; source: string };
+export type CueState = "completed" | "partial" | "skipped" | "planned";
 
 export function normalizeSpeech(value: string) { return value.toLowerCase().replace(/[.’']/g, "").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim(); }
 export function matchesCue(text: string, cue: ActivityCue) {
@@ -21,7 +38,22 @@ export function matchesCue(text: string, cue: ActivityCue) {
   });
 }
 export function mentionedCues(transcript: string, cues: ActivityCue[]) {
-  return new Set(hearActivities(transcript, cues).flatMap(a => a.cueId ? [a.cueId] : []));
+  return new Set(cueStates(transcript, cues).keys());
+}
+export function cueStates(transcript: string, cues: ActivityCue[]) {
+  const states = new Map<string, CueState>();
+  const clauses = transcript.split(/\n+|;|[.!?](?:\s+|$)|\bbut\b|\bactually\b/i).map((part) => part.trim()).filter(Boolean);
+  for (const clause of clauses) {
+    const state: CueState = /\b(didn['’]?t|did not|never|skipped|couldn['’]?t|could not)\b/i.test(clause)
+      ? "skipped"
+      : /\b(plan to|planning to|want to|need to|going to|will|tomorrow)\b/i.test(clause)
+        ? "planned"
+        : /\b(worked on|started|partly|partial|made progress|some of)\b/i.test(clause)
+          ? "partial"
+          : "completed";
+    for (const cue of cues) if (matchesCue(clause, cue)) states.set(cue.id, state);
+  }
+  return states;
 }
 export function spokenMinutes(text: string): number | null {
   const numbers: Record<string, number> = { a:1, an:1, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, fifteen:15, twenty:20, thirty:30, forty:40, fifty:50, sixty:60, ninety:90 };
@@ -43,7 +75,7 @@ export function hearActivities(transcript: string, cues: ActivityCue[]): HeardAc
     const matched = cues.filter(cue => matchesCue(source, cue));
     // A duration shared by multiple topics is ambiguous; ask once the person finishes.
     if (matched.length) return matched.map(cue => ({ key: index + ":" + cue.id, title: cue.label, cueId: cue.id, category: cue.category, minutes: matched.length === 1 ? spokenMinutes(source) : null, source }));
-    const category: ActivityCategory = /\b(studied|learned|course|study)\b/i.test(source) ? "learning" : /\b(ate|cooked|lunch|dinner|breakfast)\b/i.test(source) ? "food" : "other";
+    const category: ActivityCategory = /\b(studied|learned|course|study)\b/i.test(source) ? "Learning" : /\b(ate|cooked|lunch|dinner|breakfast)\b/i.test(source) ? "Health" : "Life Admin";
     if (!/\b(I|we|spent|studied|learned|ate|cooked|went|did|finished|completed)\b/i.test(source) && !spokenMinutes(source)) return [];
     return [{ key: index + ":other", title: source.slice(0, 100), category, minutes: spokenMinutes(source), source }];
   });
@@ -59,14 +91,16 @@ export function makeEveningSession(id: string, date: string, transcript: string,
   const entries: ActivityEntry[] = heard.map((a, i) => ({
     id: id + "-" + i, title: a.title.trim(), activityDate: date, durationMinutes: a.minutes!,
     primaryCategory: a.category, socialContext: "unknown",
-    purposeTags: a.category === "work" ? ["productive"] : a.category === "learning" ? ["growth"] : a.category === "entertainment" ? ["fun"] : a.category === "rest" ? ["recovery"] : ["necessary"],
-    confidence: 1, needsReview: false, sourceTranscriptSegment: a.source,
+    purposeTags: defaultPurpose(a.category), needsReview: false, sourceTranscriptSegment: a.source,
   }));
   return { id, sessionDate: date, sessionType: "evening", status: "completed", createdAt: new Date().toISOString(), completedAt: new Date().toISOString(), transcripts: [transcript], entries, unresolvedIssues: [] };
 }
 export function morningTasks(tasks: LifeTask[]) {
   return tasks.filter(t => t.status !== "Done").sort((a,b) => {
     const priority = { high:0, medium:1, low:2 };
-    return priority[a.priority] - priority[b.priority] || (a.status === "In Progress" ? 0 : 1) - (b.status === "In Progress" ? 0 : 1) || (a.estimatedHours ?? Infinity) - (b.estimatedHours ?? Infinity);
+    const today = new Date().toISOString().slice(0, 10);
+    const dueA = a.dueDate && a.dueDate <= today ? 0 : 1;
+    const dueB = b.dueDate && b.dueDate <= today ? 0 : 1;
+    return dueA - dueB || priority[a.priority] - priority[b.priority] || (a.status === "In Progress" ? 0 : 1) - (b.status === "In Progress" ? 0 : 1) || (a.estimatedHours ?? Infinity) - (b.estimatedHours ?? Infinity);
   }).slice(0,3);
 }

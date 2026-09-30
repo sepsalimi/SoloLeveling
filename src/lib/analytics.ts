@@ -1,5 +1,7 @@
+// Exact actual-time aggregation with honest range capacity and canonical area totals.
 import { ActivityEntry, AnalyticsPeriod, PurposeTag } from "@/types/activity";
 import { addDays, isoDate, sameDate, startOfWeek } from "@/lib/dates";
+import { normalizeArea } from "./areas";
 
 export type AnalyticsSummary = {
   totalMinutes: number;
@@ -14,11 +16,11 @@ export type AnalyticsSummary = {
 };
 
 export function effectiveFocusedMinutes(entry: ActivityEntry): number {
-  if (!entry.purposeTags.includes("productive")) return 0;
-  return Math.round(entry.durationMinutes * ((entry.efficiencyPercent ?? 100) / 100));
+  if (!entry.purposeTags.includes("productive") || entry.efficiencyPercent == null) return 0;
+  return Math.round(entry.durationMinutes * (entry.efficiencyPercent / 100));
 }
 
-export function summarizeActivities(entries: ActivityEntry[], today = new Date()): AnalyticsSummary {
+export function summarizeActivities(entries: ActivityEntry[], window?: { start: Date; end: Date }): AnalyticsSummary {
   const totalMinutes = entries.reduce((sum, entry) => sum + entry.durationMinutes, 0);
   const byCategory: Record<string, number> = {};
   const byPurpose = { productive: 0, fun: 0, recovery: 0, necessary: 0, growth: 0 };
@@ -27,11 +29,15 @@ export function summarizeActivities(entries: ActivityEntry[], today = new Date()
     .filter((value): value is number => typeof value === "number");
 
   for (const entry of entries) {
-    byCategory[entry.primaryCategory] = (byCategory[entry.primaryCategory] ?? 0) + entry.durationMinutes;
+    const category = normalizeArea(entry.primaryCategory);
+    byCategory[category] = (byCategory[category] ?? 0) + entry.durationMinutes;
     for (const tag of entry.purposeTags) byPurpose[tag] += entry.durationMinutes;
   }
 
-  const days = Array.from({ length: 7 }, (_, index) => isoDate(addDays(today, index - 6)));
+  const start = window?.start ?? new Date();
+  const end = window?.end ?? start;
+  const days: string[] = [];
+  for (let date = new Date(start); date <= end; date = addDays(date, 1)) days.push(isoDate(date));
   const dailyTracked = days.map((date) => ({
     date,
     minutes: entries.filter((entry) => sameDate(entry.activityDate, date)).reduce((sum, entry) => sum + entry.durationMinutes, 0)
@@ -39,7 +45,7 @@ export function summarizeActivities(entries: ActivityEntry[], today = new Date()
 
   return {
     totalMinutes,
-    untrackedMinutes: Math.max(0, 24 * 60 - totalMinutes),
+    untrackedMinutes: Math.max(0, days.length * 24 * 60 - totalMinutes),
     byCategory,
     byPurpose,
     soloMinutes: entries.filter((entry) => entry.socialContext === "solo").reduce((sum, entry) => sum + entry.durationMinutes, 0),
@@ -55,6 +61,31 @@ export function summarizeActivities(entries: ActivityEntry[], today = new Date()
 export function filterEntriesForPeriod(entries: ActivityEntry[], period: AnalyticsPeriod, now = new Date()): ActivityEntry[] {
   const { start, end } = periodBounds(period, now);
   return filterBetween(entries, start, end);
+}
+
+export function customPeriodBounds(start: string, end: string) {
+  const first = new Date(`${start}T12:00:00`);
+  const last = new Date(`${end}T12:00:00`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)
+    || Number.isNaN(first.valueOf()) || Number.isNaN(last.valueOf()) || first > last) {
+    throw new Error("Choose a valid custom date range.");
+  }
+  return { start: first, end: last };
+}
+
+export function filterEntriesForRange(entries: ActivityEntry[], start: string, end: string) {
+  const bounds = customPeriodBounds(start, end);
+  return filterBetween(entries, bounds.start, bounds.end);
+}
+
+export function trackedSeriesForRange(entries: ActivityEntry[], start: string, end: string) {
+  const bounds = customPeriodBounds(start, end);
+  const dates: { date: string; minutes: number }[] = [];
+  for (let date = new Date(bounds.start); date <= bounds.end; date = addDays(date, 1)) {
+    const key = isoDate(date);
+    dates.push({ date: key, minutes: entries.filter((entry) => sameDate(entry.activityDate, key)).reduce((sum, entry) => sum + entry.durationMinutes, 0) });
+  }
+  return dates;
 }
 
 export function filterEntriesForPreviousPeriod(entries: ActivityEntry[], period: AnalyticsPeriod, now = new Date()) {
@@ -89,7 +120,7 @@ export function trackedSeries(entries: ActivityEntry[], period: AnalyticsPeriod,
   return dates;
 }
 
-function periodBounds(period: AnalyticsPeriod, now: Date) {
+export function periodBounds(period: AnalyticsPeriod, now: Date) {
   const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const start =
     period === "today"

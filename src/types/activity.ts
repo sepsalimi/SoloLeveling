@@ -1,17 +1,7 @@
-export const activityCategories = [
-  "work",
-  "learning",
-  "health",
-  "exercise",
-  "food",
-  "chores",
-  "social",
-  "entertainment",
-  "rest",
-  "travel",
-  "personal_care",
-  "other"
-] as const;
+// Dated actual-activity records share the same broad area taxonomy as planning.
+import { lifeAreas, LifeArea } from "./life";
+
+export const activityCategories = lifeAreas;
 
 export const socialContexts = [
   "solo",
@@ -25,7 +15,7 @@ export const socialContexts = [
 
 export const purposeTags = ["productive", "fun", "recovery", "necessary", "growth"] as const;
 
-export type ActivityCategory = (typeof activityCategories)[number];
+export type ActivityCategory = LifeArea;
 export type SocialContext = (typeof socialContexts)[number];
 export type PurposeTag = (typeof purposeTags)[number];
 
@@ -35,16 +25,20 @@ export type ActivityEntry = {
   title: string;
   description?: string;
   activityDate: string;
+  recordedAt?: string;
   startTime?: string;
   endTime?: string;
   durationMinutes: number;
   primaryCategory: ActivityCategory;
+  projectId?: string;
+  taskId?: string;
+  outcome?: "completed" | "partial";
   socialContext: SocialContext;
   purposeTags: PurposeTag[];
   efficiencyPercent?: number;
   energyLevel?: number;
   mood?: number;
-  confidence: number;
+  confidence?: number;
   sourceTranscriptSegment?: string;
   needsReview: boolean;
 };
@@ -59,7 +53,17 @@ export type CheckInSession = {
   transcripts: string[];
   entries: ActivityEntry[];
   unresolvedIssues: string[];
-  untimedActivities?: Array<{ title: string; category: ActivityCategory; source: string }>;
+  untimedActivities?: Array<{
+    id: string;
+    title: string;
+    category: ActivityCategory;
+    occurredOn: string;
+    recordedAt: string;
+    source: string;
+    projectId?: string;
+    taskId?: string;
+    outcome: "completed" | "partial";
+  }>;
   processingModel?: string;
 };
 
