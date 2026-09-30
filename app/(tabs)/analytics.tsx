@@ -3,35 +3,47 @@ import { Dimensions, Pressable, ScrollView, StyleSheet, useColorScheme, View } f
 import { LineChart, StackedBarChart } from "react-native-chart-kit";
 import { DonutChart } from "react-native-chart-kit/v2";
 import { Card } from "@/components/Card";
+import { Input } from "@/components/Input";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
 import {
+  customPeriodBounds,
+  filterEntriesForRange,
   filterEntriesForPeriod,
   filterEntriesForPreviousPeriod,
+  periodBounds,
   summarizeActivities,
-  trackedSeries
+  trackedSeries,
+  trackedSeriesForRange
 } from "@/lib/analytics";
-import { minutesToLabel } from "@/lib/dates";
+import { isoDate, minutesToLabel } from "@/lib/dates";
 import { AnalyticsPeriod } from "@/types/activity";
 import { palette, surfaces } from "@/theme/colors";
 import { BrandMark } from "@/components/BrandMark";
 import { EmptyState } from "@/components/EmptyState";
 import { router } from "expo-router";
 
-const periods: AnalyticsPeriod[] = ["today", "week", "month", "ytd"];
+const periods: Array<AnalyticsPeriod | "custom"> = ["today", "week", "month", "ytd", "custom"];
 const chartColors = [palette.teal, palette.clay, palette.gold, palette.rose, palette.mint];
 
 export default function AnalyticsScreen() {
   const dark = useColorScheme() === "dark";
   const theme = surfaces(dark);
-  const [period, setPeriod] = useState<AnalyticsPeriod>("week");
+  const [period, setPeriod] = useState<AnalyticsPeriod | "custom">("week");
+  const [customStart, setCustomStart] = useState(isoDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)));
+  const [customEnd, setCustomEnd] = useState(isoDate());
   const { activities } = useAppState();
-  const entries = useMemo(() => filterEntriesForPeriod(activities, period), [activities, period]);
-  const previousEntries = useMemo(() => filterEntriesForPreviousPeriod(activities, period), [activities, period]);
-  const summary = summarizeActivities(entries);
+  const validCustom = /^\d{4}-\d{2}-\d{2}$/.test(customStart) && /^\d{4}-\d{2}-\d{2}$/.test(customEnd) && customStart <= customEnd;
+  const entries = useMemo(
+    () => period === "custom" ? validCustom ? filterEntriesForRange(activities, customStart, customEnd) : [] : filterEntriesForPeriod(activities, period),
+    [activities, customEnd, customStart, period, validCustom],
+  );
+  const previousEntries = useMemo(() => period === "custom" ? [] : filterEntriesForPreviousPeriod(activities, period), [activities, period]);
+  const window = period === "custom" && validCustom ? customPeriodBounds(customStart, customEnd) : period === "custom" ? periodBounds("today", new Date()) : periodBounds(period, new Date());
+  const summary = summarizeActivities(entries, window);
   const previousSummary = summarizeActivities(previousEntries);
-  const series = trackedSeries(entries, period);
+  const series = period === "custom" && validCustom ? trackedSeriesForRange(entries, customStart, customEnd) : period === "custom" ? [] : trackedSeries(entries, period);
   const width = Math.min(Dimensions.get("window").width - 40, 420);
   const chartWidth = Math.max(width, series.length * 42);
   const pieData = Object.entries(summary.byCategory).map(([label, value], index) => ({
@@ -53,7 +65,7 @@ export default function AnalyticsScreen() {
   );
   const trackedDelta = summary.totalMinutes - previousSummary.totalMinutes;
   const socialDelta = summary.socialMinutes - previousSummary.socialMinutes;
-  const exerciseDays = new Set(entries.filter((entry) => entry.primaryCategory === "exercise").map((entry) => entry.activityDate)).size;
+  const exerciseDays = new Set(entries.filter((entry) => /\b(gym|workout|exercise|run|walk|swim)\b/i.test(entry.title)).map((entry) => entry.activityDate)).size;
   const topCategory = Object.entries(summary.byCategory).sort((a, b) => b[1] - a[1])[0];
   const hasEntries = entries.length > 0;
 
@@ -64,6 +76,16 @@ export default function AnalyticsScreen() {
         <Text variant="display">See the shape{"\n"}of your time.</Text>
         <Text style={styles.lede}>Patterns are observations, never grades.</Text>
       </View>
+      {period === "custom" ? (
+        <Card variant="outline">
+          <Text variant="heading">Custom range</Text>
+          <View style={styles.customRange}>
+            <Input value={customStart} onChangeText={setCustomStart} accessibilityLabel="Custom range start" placeholder="YYYY-MM-DD" />
+            <Input value={customEnd} onChangeText={setCustomEnd} accessibilityLabel="Custom range end" placeholder="YYYY-MM-DD" />
+          </View>
+          {!validCustom && <Text variant="caption">Enter a valid start and end date.</Text>}
+        </Card>
+      ) : null}
       <View style={[styles.segment, { backgroundColor: theme.chip }]}>
         {periods.map((item) => (
           <Pressable
@@ -97,7 +119,7 @@ export default function AnalyticsScreen() {
       </Card>
       <View style={styles.metrics}>
         <View style={[styles.metric, styles.metricGold]}><Text variant="eyebrow">Recorded</Text><Text variant="metric">{minutesToLabel(summary.totalMinutes)}</Text></View>
-        <View style={[styles.metric, styles.metricMint]}><Text variant="eyebrow">Focused</Text><Text variant="metric">{minutesToLabel(summary.effectiveFocusedMinutes)}</Text></View>
+        <View style={[styles.metric, styles.metricMint]}><Text variant="eyebrow">Reported focus</Text><Text variant="metric">{minutesToLabel(summary.effectiveFocusedMinutes)}</Text></View>
       </View>
       <View style={styles.sectionHeader}><Text variant="eyebrow">Composition</Text><Text variant="heading">Where time gathered</Text></View>
       <Card variant="outline">
@@ -221,6 +243,7 @@ const styles = StyleSheet.create({
   note: { flexDirection: "row", gap: 16, paddingVertical: 17, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: palette.line },
   noteNumber: { width: 30, color: palette.coral, fontSize: 13, fontWeight: "900" },
   noteText: { flex: 1, fontSize: 17, lineHeight: 24 },
+  customRange: { gap: 10 },
   chart: { borderRadius: 18 }
 });
 

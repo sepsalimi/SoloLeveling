@@ -1,145 +1,282 @@
-import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, TextInput, useColorScheme, useWindowDimensions, View } from "react-native";
+// Conversational planner with linked projects, dated views, recurrence, and optional task details.
+import { useCallback, useMemo, useState } from "react";
+import { Pressable, StyleSheet, TextInput, useColorScheme, View } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { LifeCapture } from "@/components/LifeCapture";
 import { Screen } from "@/components/Screen";
+import { TaskPie } from "@/components/TaskPie";
 import { Text } from "@/components/Text";
-import { TaskVoice } from "@/components/TaskVoice";
-import { TaskPie, categoryColors } from "@/components/TaskPie";
-import { draftTasks, taskType } from "@/lib/tasks";
-import { loadTasks, saveTasks } from "@/services/taskStore";
-import { LifeTask, taskCategories, taskTypes } from "@/types/task";
-import { palette } from "@/theme/colors";
+import { useAppState } from "@/context/AppState";
+import { addDays, isoDate } from "@/lib/dates";
+import { completeTaskOccurrence, expandOccurrences, occurrenceId, taskOccursOn } from "@/lib/recurrence";
+import { taskType } from "@/lib/tasks";
+import { loadLifePlan, saveLifePlan, syncLifePlan } from "@/services/taskStore";
+import { emptyLifePlan, lifeAreas, LifePlan, LifeTask, Project } from "@/types/life";
+import { palette, surfaces } from "@/theme/colors";
+
+const shortcuts = ["Inbox", "Today", "Tomorrow", "Next 7 Days", "Completed"] as const;
+type Shortcut = (typeof shortcuts)[number] | `project:${string}`;
 
 export default function TasksScreen() {
-  const [tasks, setTasks] = useState<LifeTask[]>([]);
-  const [drafts, setDrafts] = useState<LifeTask[]>([]);
-  const [transcript, setTranscript] = useState("");
-  const [ready, setReady] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const dark = useColorScheme() === "dark";
+  const theme = surfaces(dark);
+  const [plan, setPlan] = useState<LifePlan>(emptyLifePlan());
+  const [view, setView] = useState<Shortcut>("Today");
+  const [editing, setEditing] = useState<LifeTask>();
   const [message, setMessage] = useState("");
-  const [filter, setFilter] = useState("All");
-  const [view, setView] = useState("Pending");
-  const [editing, setEditing] = useState<LifeTask | null>(null);
-  const [search, setSearch] = useState("");
-  useEffect(() => { loadTasks().then(setTasks).then(() => setReady(true)).catch(e => setMessage(e.message)); }, []);
+  const [ready, setReady] = useState(false);
+  const { user } = useAppState();
+  const today = isoDate();
+  const tomorrow = isoDate(addDays(new Date(), 1));
+  const weekEnd = isoDate(addDays(new Date(), 7));
 
-  async function persist(next: LifeTask[]) {
-    setBusy(true); setMessage("");
-    try { await saveTasks(next); setTasks(next); return true; }
-    catch { setMessage("Could not save your tasks. Please try again; your edits are still here."); return false; }
-    finally { setBusy(false); }
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    loadLifePlan()
+      .then((saved) => {
+        if (active) {
+          setPlan(expandOccurrences(saved, today, isoDate(addDays(new Date(), 31))));
+          setReady(true);
+        }
+        if (user) {
+          void syncLifePlan()
+            .then((synced) => { if (active) setPlan(expandOccurrences(synced, today, isoDate(addDays(new Date(), 31)))); })
+            .catch((error) => { if (active) setMessage(error instanceof Error ? error.message : "Plan sync is unavailable."); });
+        }
+      })
+      .catch((error) => { if (active) setMessage(error instanceof Error ? error.message : "Could not load your plan."); });
+    return () => { active = false; };
+  }, [today, user]));
+
+  async function persist(next: LifePlan) {
+    const status = await saveLifePlan(next);
+    setPlan(next);
+    setMessage(status === "synced" ? "Plan saved and synced." : status === "pending" ? "Plan saved here. Account sync is pending." : "Plan saved on this device.");
   }
-  async function saveDrafts() {
-    if (drafts.some(t => !t.title.trim())) { setMessage("Give each task a title before saving."); return; }
-    if (await persist([...tasks, ...drafts])) { setDrafts([]); setTranscript(""); setMessage("Tasks added to your planner."); }
+
+  const visible = useMemo(() => plan.tasks.filter((task) => {
+    const doneToday = plan.occurrences.find((item) => item.id === occurrenceId(task.id, today))?.status === "done";
+    if (view === "Completed") return task.status === "Done" || plan.occurrences.some((item) => item.taskId === task.id && item.status === "done");
+    if (task.status === "Done") return false;
+    if (view === "Inbox") return !task.projectId && !task.dueDate && !task.recurrence;
+    if (view === "Today") return !doneToday && (task.dueDate === today || taskOccursOn(task, today));
+    if (view === "Tomorrow") return task.dueDate === tomorrow || taskOccursOn(task, tomorrow);
+    if (view === "Next 7 Days") {
+      return Boolean((task.dueDate && task.dueDate >= today && task.dueDate <= weekEnd)
+        || plan.occurrences.some((item) => item.taskId === task.id && item.scheduledFor >= today && item.scheduledFor <= weekEnd && item.status === "pending"));
+    }
+    return task.projectId === view.slice("project:".length);
+  }), [plan, today, tomorrow, view, weekEnd]);
+
+  async function complete(task: LifeTask) {
+    const date = view === "Tomorrow" ? tomorrow : today;
+    await persist(completeTaskOccurrence(plan, task.id, date));
   }
-  const pending = tasks.filter(t => t.status !== "Done");
-  const visible = tasks.filter(t => (view === "Completed" ? t.status === "Done" : t.status !== "Done") && (filter === "All" || t.category === filter) && t.title.toLowerCase().includes(search.toLowerCase()));
-  const dark = useColorScheme() === "dark";
-  const { width } = useWindowDimensions();
-  const inputStyle = [styles.input, { color: dark ? palette.darkInk : palette.ink }];
-  return <Screen>
-    <Text variant="caption">YOUR LIFE, A LITTLE CLEARER</Text>
-    <Text variant="title">Everything on your mind.</Text>
-    <Text>Say it all. We’ll help sort it into a plan you can actually work through.</Text>
-    <Card>
-      <Text variant="heading">Make room in your head</Text>
-      <TaskVoice onTranscript={text => setTranscript(current => (current + "\n" + text).trim())} />
-      <TextInput accessibilityLabel="Tasks to organize" multiline value={transcript} onChangeText={setTranscript} placeholder="Pay the electricity bill, high priority, 15 minutes. Book a dentist appointment, 30 minutes. Play a game, low priority, two hours." placeholderTextColor={palette.muted} style={[inputStyle, { minHeight: 120, textAlignVertical: "top" }]} />
-      <Button label="Organize my tasks" icon="sparkles-outline" disabled={!ready || busy || !transcript.trim() || drafts.length > 0} onPress={() => { setDrafts(draftTasks(transcript)); setMessage(""); }} />
-      <Text variant="caption">Automatic suggestions use task wording. Unstated priority defaults to medium; missing hours stay blank. Review everything before saving. Tasks stay on this device.</Text>
-    </Card>
-    {!!message && <Text accessibilityRole="alert">{message}</Text>}
-    {!!drafts.length && <Card>
-      <Text variant="heading">A first pass, yours to adjust</Text>
-      <Text variant="caption">{drafts.length} suggested tasks · edit category, priority, and hours</Text>
-      {drafts.map(task => <TaskEditor key={task.id} task={task} onChange={updated => setDrafts(items => items.map(t => t.id === updated.id ? updated : t))} onRemove={() => setDrafts(items => items.filter(t => t.id !== task.id))} />)}
-      <Button label={busy ? "Saving…" : "Save tasks"} disabled={busy} onPress={() => void saveDrafts()} />
-      <Button label="Discard suggestions" variant="ghost" disabled={busy} onPress={() => setDrafts([])} />
-    </Card>}
-    <View style={styles.row}>
-      {taskCategories.map((category, index) => {
-        const all = tasks.filter(t => t.category === category);
-        const active = all.filter(t => t.status !== "Done");
-        return <Pressable accessibilityRole="button" accessibilityState={{ selected: filter === category }} key={category} onPress={() => setFilter(filter === category ? "All" : category)} style={[styles.category, { width: (width - 40 - (width >= 800 ? 24 : 8)) / (width >= 800 ? 4 : 2), borderColor: filter === category ? categoryColors[index] : palette.line }]}>
-          <View style={{ height: 5, borderRadius: 3, backgroundColor: categoryColors[index] }} />
-          <Text style={{ fontWeight: "700" }}>{category}</Text>
-          <Text variant="caption">{active.length} active · {active.reduce((sum, t) => sum + (t.estimatedHours ?? 0), 0).toFixed(1)} h</Text>
-          <View style={{ height: 4, backgroundColor: dark ? palette.darkLine : palette.line, borderRadius: 3 }}>
-            <View style={{ height: 4, backgroundColor: categoryColors[index], width: ((all.length ? Math.round((all.length - active.length) / all.length * 100) : 0) + "%") as `${number}%` }} />
+
+  return (
+    <Screen>
+      <View style={styles.header}>
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text variant="eyebrow">Plan</Text>
+          <Text variant="display">Make room in your head.</Text>
+          <Text style={{ color: theme.softText }}>Speak naturally. Goals, projects, recurring work, and next actions stay connected.</Text>
+        </View>
+      </View>
+
+      <LifeCapture plan={plan} onPlan={(next) => setPlan(expandOccurrences(next, today, isoDate(addDays(new Date(), 31))))} />
+      {!!message && <Text accessibilityRole="alert">{message}</Text>}
+
+      <View style={styles.shortcutRow}>
+        {shortcuts.map((item) => <Choice key={item} label={item} active={view === item} onPress={() => setView(item)} />)}
+      </View>
+
+      {!!plan.goals.length && (
+        <View style={styles.section}>
+          <Text variant="eyebrow">Active goals</Text>
+          <View style={styles.shortcutRow}>
+            {plan.goals.filter((goal) => goal.status === "active").map((goal) => (
+              <View key={goal.id} style={[styles.goal, { backgroundColor: theme.chip }]}>
+                <Text variant="label">{goal.title}</Text>
+                <Text variant="caption">{goal.area}</Text>
+              </View>
+            ))}
           </View>
-          <Text variant="caption">{all.length ? Math.round((all.length - active.length) / all.length * 100) : 0}% completed</Text>
-        </Pressable>;
+        </View>
+      )}
+
+      <View style={styles.section}>
+        <Text variant="eyebrow">Projects</Text>
+        <View style={styles.projectGrid}>
+          {plan.projects.filter((project) => project.status === "active").map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              tasks={plan.tasks.filter((task) => task.projectId === project.id)}
+              today={today}
+              active={view === `project:${project.id}`}
+              onPress={() => setView(`project:${project.id}`)}
+            />
+          ))}
+          {!plan.projects.length && <Text variant="caption">Projects appear here when your update describes an ongoing effort.</Text>}
+        </View>
+      </View>
+
+      <Card>
+        <TaskPie tasks={plan.tasks} />
+        <Text variant="caption">Planned hours only. Recorded actual time appears in Analytics.</Text>
+      </Card>
+
+      <View style={styles.section}>
+        <Text variant="eyebrow">{view.startsWith("project:") ? "Project tasks" : view}</Text>
+        <Text variant="heading">{visible.length} {visible.length === 1 ? "task" : "tasks"}</Text>
+      </View>
+
+      {editing && (
+        <Card>
+          <TaskEditor task={editing} projects={plan.projects} onChange={setEditing} />
+          <View style={styles.shortcutRow}>
+            <Button
+              label="Save details"
+              onPress={() => {
+                const next = { ...plan, tasks: plan.tasks.map((task) => task.id === editing.id ? editing : task) };
+                void persist(expandOccurrences(next, today, isoDate(addDays(new Date(), 31)))).then(() => setEditing(undefined));
+              }}
+            />
+            <Button label="Cancel" variant="ghost" onPress={() => setEditing(undefined)} />
+          </View>
+        </Card>
+      )}
+
+      {!ready && <Text>Loading your plan...</Text>}
+      {ready && !visible.length && <Card><Text>No tasks in this view. Try Inbox or tell the planner what needs doing.</Text></Card>}
+      {visible.map((task) => {
+        const project = plan.projects.find((item) => item.id === task.projectId);
+        const completedOccurrence = plan.occurrences
+          .filter((item) => item.taskId === task.id && item.status === "done")
+          .sort((a, b) => b.scheduledFor.localeCompare(a.scheduledFor))[0];
+        return (
+          <Card key={task.id} variant="outline">
+            <View style={styles.taskTitle}>
+              <View style={{ flex: 1, gap: 5 }}>
+                <Text variant="heading">{task.title}</Text>
+                <Text variant="caption">
+                  {task.category} · {task.priority} · {task.estimatedHours == null ? "estimate pending" : `${task.estimatedHours} h planned`}
+                </Text>
+              </View>
+              <Text variant="caption">{taskType(task.priority, task.estimatedHours)}</Text>
+            </View>
+            <Text variant="caption">
+              {project ? `${project.title} · ` : ""}
+              {task.dueDate ? `Due ${task.dueDate}` : "No hard deadline"}
+              {task.recurrence ? ` · ${task.recurrence.frequency}` : ""}
+              {view === "Completed" && completedOccurrence ? ` · completed ${completedOccurrence.scheduledFor}` : ""}
+            </Text>
+            <View style={styles.shortcutRow}>
+              {view !== "Completed" && <Button label="Complete" compact variant="secondary" onPress={() => void complete(task)} />}
+              <Button label="Edit details" compact variant="ghost" onPress={() => setEditing({ ...task })} />
+            </View>
+          </Card>
+        );
       })}
-    </View>
-    <Card><TaskPie tasks={tasks} /></Card>
-    <Text variant="heading">All tasks <Text variant="caption"> · {pending.length} to work on</Text></Text>
-    <Choice label="Task view" items={["Pending", "Completed"]} selected={view} onSelect={setView} />
-    {filter !== "All" && <Button label={"Clear " + filter + " filter"} variant="ghost" onPress={() => setFilter("All")} />}
-    <TextInput accessibilityLabel="Search tasks" value={search} onChangeText={setSearch} placeholder="Find a task…" placeholderTextColor={palette.muted} style={inputStyle} />
-    {!ready && !message && <Text>Loading your tasks…</Text>}
-    {ready && !visible.length && <Card><Text>{tasks.length ? "No tasks match this view." : "Your next chapter starts here. Dictate or type a few tasks above."}</Text></Card>}
-    {editing && <Card>
-      <Text variant="heading">Edit task</Text>
-      <TaskEditor key={editing.id} task={editing} onChange={setEditing} disabled={busy}
-        onRemove={() => void persist(tasks.filter(t => t.id !== editing.id)).then(saved => { if (saved) setEditing(null); })}
-        onSave={() => {
-          if (!editing.title.trim()) { setMessage("Enter a task title."); return; }
-          void persist(tasks.map(t => t.id === editing.id ? editing : t)).then(saved => { if (saved) setEditing(null); });
-        }} />
-      <Button label="Cancel edits" variant="ghost" disabled={busy} onPress={() => setEditing(null)} />
-    </Card>}
-    {taskTypes.map(type => {
-      const group = visible.filter(t => taskType(t.priority, t.estimatedHours) === type).sort((a, b) => ({high: 0, medium: 1, low: 2}[a.priority] - {high: 0, medium: 1, low: 2}[b.priority]));
-      if (!group.length) return null;
-      return <Card key={type}>
-        <Text variant="heading">{type} · {group.length}</Text>
-        {group.map(task => <View key={task.id} style={styles.task}>
-          <Text style={{ fontWeight: "700" }}>{task.title}</Text>
-          <Text variant="caption">{task.category} · {task.priority.toUpperCase()} · {task.estimatedHours == null ? "No hours set" : task.estimatedHours + " h"} · {task.status}</Text>
-          <View style={styles.row}>
-            <Button label={task.status === "Done" ? "Reopen" : "Complete"} variant="secondary" disabled={busy || editing !== null} onPress={() => void persist(tasks.map(t => t.id === task.id ? { ...t, status: t.status === "Done" ? "To Do" : "Done" } : t))} />
-            <Button label="Edit" variant="ghost" disabled={busy || editing !== null} onPress={() => setEditing({ ...task })} />
-          </View>
-        </View>)}
-      </Card>;
-    })}
-    <Text variant="caption">Medium / high: ≤ 1 h = Low Hanging, &gt; 1 h = Big Rock. Low: ≤ 1 h = Nice to Do, &gt; 1 h = Time Sink.</Text>
-  </Screen>;
+    </Screen>
+  );
 }
-function Choice({ label, items, selected, onSelect }: { label: string; items: readonly string[]; selected: string; onSelect: (value: string) => void }) {
-  return <View style={styles.row}>{items.map(item => <Pressable key={item} accessibilityRole="button" accessibilityLabel={label + ": " + item} accessibilityState={{ selected: selected === item }} onPress={() => onSelect(item)} style={[styles.chip, selected === item && { backgroundColor: palette.teal }]}>
-    <Text style={{ fontSize: 13, color: selected === item ? "#FFFFFF" : palette.teal }}>{item}</Text>
-  </Pressable>)}</View>;
-}
-function TaskEditor({ task, onChange, onRemove, onSave, disabled }: { task: LifeTask; onChange: (task: LifeTask) => void; onRemove: () => void; onSave?: () => void; disabled?: boolean }) {
-  const dark = useColorScheme() === "dark";
 
-  const inputStyle = [styles.input, { color: dark ? palette.darkInk : palette.ink }];
-  const [hours, setHours] = useState(task.estimatedHours?.toString() ?? "");
-  const validHours = hours.trim() === "" || (Number.isFinite(Number(hours)) && Number(hours) > 0);
-  return <View style={styles.task}>
-    <TextInput accessibilityLabel="Task title" value={task.title} onChangeText={title => onChange({ ...task, title })} style={inputStyle} />
-    <Text variant="caption">Category</Text>
-    <Choice label="Category" items={taskCategories} selected={task.category} onSelect={category => onChange({ ...task, category: category as LifeTask["category"] })} />
-    <Text variant="caption">Priority</Text>
-    <Choice label="Priority" items={["low", "medium", "high"]} selected={task.priority} onSelect={priority => onChange({ ...task, priority: priority as LifeTask["priority"] })} />
-    <Text variant="caption">Estimated hours</Text>
-    <TextInput accessibilityLabel="Estimated hours" keyboardType="decimal-pad" value={hours} placeholder="e.g. 0.5" placeholderTextColor={palette.muted} onChangeText={value => { setHours(value); const n = Number(value); onChange({ ...task, estimatedHours: value.trim() && Number.isFinite(n) && n > 0 ? n : null }); }} style={inputStyle} />
-    {!validHours && <Text variant="caption">Enter positive hours. Invalid values are treated as no estimate.</Text>}
-    <Text>{taskType(task.priority, task.estimatedHours)}</Text>
-    {onSave && <Choice label="Status" items={["To Do", "In Progress", "Done"]} selected={task.status} onSelect={status => onChange({ ...task, status: status as LifeTask["status"] })} />}
-    <View style={styles.row}>
-      {onSave && <Button label="Save changes" disabled={disabled || !validHours} onPress={onSave} />}
-      <Button label="Remove task" variant="danger" disabled={disabled} onPress={onRemove} />
-    </View>
-  </View>;
+function Choice({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} onPress={onPress} style={[styles.choice, active && styles.choiceActive]}>
+      <Text style={{ color: active ? "#FFFFFF" : palette.teal, fontWeight: "700" }}>{label}</Text>
+    </Pressable>
+  );
 }
+
+function ProjectCard({ project, tasks, today, active, onPress }: { project: Project; tasks: LifeTask[]; today: string; active: boolean; onPress: () => void }) {
+  const done = tasks.filter((task) => task.status === "Done").length;
+  const activeCount = tasks.length - done;
+  const overdue = tasks.filter((task) => task.status !== "Done" && task.dueDate && task.dueDate < today).length;
+  const progress = tasks.length ? `${Math.round(done / tasks.length * 100)}%` : "0%";
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} onPress={onPress} style={[styles.project, { borderColor: active ? project.color : palette.line }]}>
+      <View style={[styles.projectMark, { backgroundColor: project.color }]} />
+      <Text variant="heading">{project.title}</Text>
+      <Text variant="caption">{project.area} · {activeCount} active{overdue ? ` · ${overdue} overdue` : ""}</Text>
+      <View style={styles.progress}><View style={[styles.progressFill, { backgroundColor: project.color, width: progress as `${number}%` }]} /></View>
+      <Text variant="caption">{progress} complete</Text>
+    </Pressable>
+  );
+}
+
+function TaskEditor({ task, projects, onChange }: { task: LifeTask; projects: Project[]; onChange: (task: LifeTask) => void }) {
+  const dark = useColorScheme() === "dark";
+  const theme = surfaces(dark);
+  const input = [styles.input, { color: theme.ink, borderColor: theme.line, backgroundColor: theme.surface }];
+  return (
+    <View style={{ gap: 12 }}>
+      <Text variant="heading">Task details</Text>
+      <TextInput accessibilityLabel="Task title" value={task.title} onChangeText={(title) => onChange({ ...task, title })} style={input} />
+      <TextInput
+        accessibilityLabel="Estimated hours"
+        keyboardType="decimal-pad"
+        value={task.estimatedHours?.toString() ?? ""}
+        placeholder="Planned hours"
+        placeholderTextColor={theme.softText}
+        onChangeText={(value) => onChange({ ...task, estimatedHours: value.trim() && Number(value) > 0 ? Number(value) : null, estimateSource: "explicit" })}
+        style={input}
+      />
+      <TextInput
+        accessibilityLabel="Due date"
+        value={task.dueDate ?? ""}
+        placeholder="Due date, YYYY-MM-DD (optional)"
+        placeholderTextColor={theme.softText}
+        onChangeText={(dueDate) => onChange({ ...task, dueDate: dueDate.trim() || null, dueDateSource: dueDate.trim() ? "explicit" : undefined })}
+        style={input}
+      />
+      <Text variant="caption">Area</Text>
+      <View style={styles.shortcutRow}>{lifeAreas.map((area) => <Choice key={area} label={area} active={task.category === area} onPress={() => onChange({ ...task, category: area })} />)}</View>
+      <Text variant="caption">Priority</Text>
+      <View style={styles.shortcutRow}>{(["low", "medium", "high"] as const).map((priority) => <Choice key={priority} label={priority} active={task.priority === priority} onPress={() => onChange({ ...task, priority, prioritySource: "explicit" })} />)}</View>
+      <Text variant="caption">Project</Text>
+      <View style={styles.shortcutRow}>
+        <Choice label="No project" active={!task.projectId} onPress={() => onChange({ ...task, projectId: undefined })} />
+        {projects.map((project) => <Choice key={project.id} label={project.title} active={task.projectId === project.id} onPress={() => onChange({ ...task, projectId: project.id })} />)}
+      </View>
+      <Text variant="caption">Repeat</Text>
+      <View style={styles.shortcutRow}>
+        {(["none", "daily", "weekly", "monthly"] as const).map((frequency) => (
+          <Choice
+            key={frequency}
+            label={frequency}
+            active={frequency === "none" ? !task.recurrence : task.recurrence?.frequency === frequency}
+            onPress={() => onChange({
+              ...task,
+              recurrence: frequency === "none" ? undefined : {
+                frequency,
+                interval: 1,
+                startsOn: task.dueDate ?? isoDate(),
+                ...(frequency === "weekly" ? { weekdays: [new Date(`${task.dueDate ?? isoDate()}T12:00:00`).getDay()] } : {}),
+              },
+            })}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  input: { borderWidth: 1, borderColor: palette.line, borderRadius: 8, padding: 12, minHeight: 48, fontSize: 16 },
-  category: { borderWidth: 2, borderRadius: 12, padding: 16, gap: 10 },
-  chip: { minHeight: 44, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, backgroundColor: "#DDEBE6", justifyContent: "center" },
-  task: { gap: 10, paddingVertical: 16, borderTopWidth: 1, borderTopColor: palette.line },
+  header: { flexDirection: "row", gap: 16, alignItems: "flex-start" },
+  section: { gap: 8, marginTop: 8 },
+  shortcutRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  choice: { minHeight: 42, justifyContent: "center", paddingHorizontal: 13, borderRadius: 14, backgroundColor: "#DDEBE4" },
+  choiceActive: { backgroundColor: palette.forest },
+  goal: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, minWidth: 140 },
+  projectGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  project: { width: "48%", minWidth: 160, borderWidth: 2, borderRadius: 22, padding: 16, gap: 9 },
+  projectMark: { width: 36, height: 8, borderRadius: 4 },
+  progress: { height: 6, borderRadius: 3, backgroundColor: "#DDD6C8", overflow: "hidden" },
+  progressFill: { height: 6, borderRadius: 3 },
+  taskTitle: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
+  input: { minHeight: 50, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, fontSize: 16 },
 });

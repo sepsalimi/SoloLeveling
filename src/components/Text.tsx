@@ -1,6 +1,6 @@
-// Themed text with Fraunces display faces and Source Sans 3 for body copy.
+// Theme-aware display and body typography shared across all product surfaces.
 import { PropsWithChildren } from "react";
-import { StyleSheet, Text as RNText, TextProps, TextStyle, useColorScheme } from "react-native";
+import { StyleSheet, Text as RNText, TextProps, useColorScheme } from "react-native";
 import { palette } from "@/theme/colors";
 import { fonts } from "@/theme/typography";
 
@@ -11,23 +11,10 @@ export function Text({ children, style, variant = "body", ...props }: PropsWithC
   const color = variant === "caption"
     ? dark ? palette.darkMuted : palette.muted
     : dark ? palette.darkInk : palette.ink;
-  return (
-    <RNText style={[styles.base, styles[variant], { color }, style]} {...props}>
-      {children}
-    </RNText>
-  );
+  return <RNText style={[styles.base, styles[variant], { color }, style]} {...props}>{children}</RNText>;
 }
 
 const styles = StyleSheet.create({
-  base: { fontWeight: "500", letterSpacing: 0 },
-  title: { fontSize: 32, lineHeight: 38, fontWeight: "800" },
-  heading: { fontSize: 22, lineHeight: 28, fontWeight: "700" },
-  body: { fontSize: 16, lineHeight: 23 },
-  caption: { fontSize: 13, lineHeight: 18, color: palette.muted },
-  metric: { fontSize: 28, lineHeight: 34, fontWeight: "800" }
-});
-
-const styles = StyleSheet.create<TextStyles>({
   base: { fontFamily: fonts.body, letterSpacing: 0 },
   display: { fontFamily: fonts.display, fontSize: 46, lineHeight: 50, letterSpacing: -1.4 },
   title: { fontFamily: fonts.displayBold, fontSize: 32, lineHeight: 38, letterSpacing: -0.8 },
@@ -36,5 +23,5 @@ const styles = StyleSheet.create<TextStyles>({
   caption: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: palette.muted },
   metric: { fontFamily: fonts.display, fontSize: 32, lineHeight: 36, letterSpacing: -1 },
   eyebrow: { fontFamily: fonts.bodyBold, fontSize: 12, lineHeight: 16, letterSpacing: 1.4, textTransform: "uppercase" },
-  label: { fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 18 }
+  label: { fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 18 },
 });

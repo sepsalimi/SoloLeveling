@@ -1,3 +1,4 @@
+// Supabase email authentication with an explicit local-preview path when no backend is configured.
 import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
@@ -18,7 +19,7 @@ export default function AuthScreen() {
 
   async function authenticate(mode: "login" | "register") {
     if (!supabase) {
-      Alert.alert("Setup required", "Configure the Supabase URL and anonymous key before signing in.");
+      router.replace("/onboarding");
       return;
     }
     if (!email.trim() || password.length < 8) {
@@ -88,7 +89,7 @@ export default function AuthScreen() {
         <Button label="I forgot my password" icon="mail-outline" variant="ghost" compact onPress={resetPassword} />
       </Card>
       <Text variant="caption">
-        Demo mode is enabled when Supabase keys are absent. AI processing runs securely through Supabase Edge Functions.
+        Without Supabase keys, Continue opens a device-only preview. Reasoning and account sync require a configured, signed-in account.
       </Text>
     </Screen>
   );

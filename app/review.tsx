@@ -62,7 +62,7 @@ function ReviewContent() {
         title: "New activity",
         activityDate: isoDate(),
         durationMinutes: 30,
-        primaryCategory: "other",
+        primaryCategory: "Life Admin",
         socialContext: "unknown",
         purposeTags: ["necessary"],
         confidence: 1,

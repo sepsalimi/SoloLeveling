@@ -18,13 +18,14 @@ import { palette, surfaces } from "@/theme/colors";
 export default function HistoryScreen() {
   const dark = useColorScheme() === "dark";
   const theme = surfaces(dark);
-  const { activities, deleteActivity, preferences, updateActivity } = useAppState();
+  const { activities, sessions, deleteActivity, deleteUntimedActivity, preferences, updateActivity, updateUntimedActivity } = useAppState();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [social, setSocial] = useState("all");
   const [purpose, setPurpose] = useState("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [editing, setEditing] = useState<ActivityEntry>();
+  const [editingUntimed, setEditingUntimed] = useState<NonNullable<(typeof sessions)[number]["untimedActivities"]>[number]>();
   const activeFilterCount = [category, social, purpose].filter((value) => value !== "all").length;
 
   const filtered = useMemo(
@@ -42,6 +43,9 @@ export default function HistoryScreen() {
     acc[entry.activityDate] = [...(acc[entry.activityDate] ?? []), entry];
     return acc;
   }, {});
+  const untimed = sessions.flatMap((session) => session.untimedActivities ?? []).filter((entry) =>
+    `${entry.title} ${entry.category}`.toLowerCase().includes(query.toLowerCase())
+    && (category === "all" || entry.category === category));
 
   function confirmDelete(entry: ActivityEntry) {
     Alert.alert("Delete activity?", `“${entry.title}” will be permanently removed.`, [
@@ -113,6 +117,18 @@ export default function HistoryScreen() {
           </View>
         </>
       ) : null}
+      {editingUntimed ? (
+        <Card>
+          <Text variant="heading">Edit untimed event</Text>
+          <Input value={editingUntimed.title} onChangeText={(title) => setEditingUntimed({ ...editingUntimed, title })} accessibilityLabel="Untimed event title" />
+          <Input value={editingUntimed.occurredOn} onChangeText={(occurredOn) => setEditingUntimed({ ...editingUntimed, occurredOn })} accessibilityLabel="Untimed event date" />
+          <Filter label="Area" values={activityCategories} selected={editingUntimed.category} onChange={(value) => setEditingUntimed({ ...editingUntimed, category: value as typeof editingUntimed.category })} />
+          <View style={styles.actions}>
+            <Button label="Save event" onPress={() => void updateUntimedActivity(editingUntimed).then(() => setEditingUntimed(undefined))} />
+            <Button label="Cancel" variant="ghost" onPress={() => setEditingUntimed(undefined)} />
+          </View>
+        </Card>
+      ) : null}
       {Object.entries(grouped).length ? (
         Object.entries(grouped).map(([date, entries]) => (
           <View key={date} style={styles.group}>
@@ -126,6 +142,22 @@ export default function HistoryScreen() {
         <EmptyState title="Your journal is empty" body="Saved check-ins will appear here as a quiet record of your days." />
       ) : (
         <EmptyState title="No matches" body="Try a different search or filter." />
+      )}
+      {!!untimed.length && (
+        <View style={styles.group}>
+          <Text variant="eyebrow">Completed without a stated duration</Text>
+          <Text variant="caption">These events stay visible but do not add guessed minutes to analytics.</Text>
+          {untimed.map((entry) => (
+            <Card key={entry.id} variant="outline">
+              <Text variant="heading">{entry.title}</Text>
+              <Text variant="caption">{entry.occurredOn} · {entry.category} · {entry.outcome}</Text>
+              <View style={styles.actions}>
+                <Button label="Edit" compact variant="ghost" onPress={() => setEditingUntimed(entry)} />
+                <Button label="Delete" compact variant="danger" onPress={() => void deleteUntimedActivity(entry.id)} />
+              </View>
+            </Card>
+          ))}
+        </View>
       )}
     </Screen>
   );

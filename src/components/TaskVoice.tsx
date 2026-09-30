@@ -1,3 +1,4 @@
+// User-controlled web and native dictation that never submits until the user explicitly stops.
 import { continuousSpeech, Recognition } from "@/lib/continuousSpeech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform, Pressable, View, useWindowDimensions } from "react-native";
@@ -36,19 +37,24 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, onComplete, 
   const statusCallback = useRef(onStateChange); statusCallback.current = onStateChange;
   useEffect(() => { statusCallback.current?.(state); }, [state]);
   const removeAudio = useCallback((uri: string | null) => { if (uri && Platform.OS !== "web") { try { new File(uri).delete(); } catch { /* Temporary cache cleanup can be retried by the OS. */ } } }, []);
-  const cancel = useCallback(async () => {
+  const cancel = useCallback(async (reason?: string) => {
     stopping.current = false;
     const speech = recognition.current; recognition.current = null;
     speech?.abort(); generation.current++;
     interimCallback.current?.("");
     const current = recording.current; recording.current = null;
     if (current) { await current.stopAndUnloadAsync().catch(() => {}); removeAudio(current.getURI()); await Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => {}); }
-    if (mounted.current) setState("idle");
+    if (mounted.current) {
+      setState("idle");
+      if (reason) setMessage(reason);
+    }
     statusCallback.current?.("idle");
   }, [removeAudio]);
   useEffect(() => {
     mounted.current = true;
-    const subscription = AppState.addEventListener("change", next => { if (next !== "active") void cancel(); });
+    const subscription = AppState.addEventListener("change", next => {
+      if (next !== "active") void cancel("Recording stopped because the app moved to the background. Captured words are kept; tap to continue.");
+    });
     return () => { mounted.current = false; subscription.remove(); void cancel(); };
   }, [cancel]);
   useFocusEffect(useCallback(() => () => { void cancel(); }, [cancel]));

@@ -1,9 +1,11 @@
+// Today overview for recorded actual time, untimed events, and the next check-in.
 import { DailyRhythm } from "@/components/DailyRhythm";
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { ActivityCard } from "@/components/ActivityCard";
 import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
+import { Card } from "@/components/Card";
 import { DayRibbon } from "@/components/DayRibbon";
 import { EmptyState } from "@/components/EmptyState";
 import { FadeUp } from "@/components/motion";
@@ -34,6 +36,10 @@ export default function HomeScreen() {
               {date.toLocaleDateString(undefined, { month: "short" })}
             </Text>
           </View>
+        </View>
+        <View style={styles.quickLinks}>
+          <Button label="Journal" compact variant="ghost" onPress={() => router.push("/(tabs)/history")} />
+          <Button label="Settings" compact variant="ghost" onPress={() => router.push("/(tabs)/settings")} />
         </View>
       </FadeUp>
 
@@ -78,11 +84,11 @@ export default function HomeScreen() {
       </Card>
       <View style={styles.metrics}>
         <Card style={styles.metricCard}>
-          <Text variant="caption">Untracked</Text>
+          <Text variant="caption">Unknown / untracked</Text>
           <Text variant="heading">{minutesToLabel(summary.untrackedMinutes)}</Text>
         </Card>
         <Card style={styles.metricCard}>
-          <Text variant="caption">Focused</Text>
+          <Text variant="caption">Reported focus</Text>
           <Text variant="heading">{minutesToLabel(summary.effectiveFocusedMinutes)}</Text>
         </Card>
       </View>
@@ -132,6 +138,7 @@ const styles = StyleSheet.create({
     opacity: 0.35
   },
   topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  quickLinks: { flexDirection: "row", justifyContent: "flex-end", gap: 4 },
   dateStamp: {
     width: 54,
     height: 60,
@@ -154,5 +161,8 @@ const styles = StyleSheet.create({
   heroMetric: { color: "#FFFFFF", fontSize: 54, lineHeight: 56, fontWeight: "900", letterSpacing: -2 },
   heroCopy: { color: "#DCE9E4", fontSize: 15, lineHeight: 22 },
   sectionHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: 10 },
-  timeline: { paddingLeft: 2 }
+  timeline: { paddingLeft: 2 },
+  metrics: { flexDirection: "row", gap: 12 },
+  metricCard: { flex: 1 },
+  row: { flexDirection: "row", justifyContent: "space-between", gap: 16 },
 });

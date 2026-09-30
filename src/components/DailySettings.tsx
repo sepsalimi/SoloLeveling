@@ -64,7 +64,7 @@ export function DailySettings() {
           <Text variant="caption">Analytics category: {cue.category}. You can change it when reviewing your day.</Text>
           <Button label={"Remove tile " + cue.label} variant="ghost" disabled={busy} onPress={() => setCues(items => items.filter(c => c.id !== cue.id))} />
         </View>)}
-        <Button label="Add a tile" variant="secondary" disabled={busy || cues.length >= 16} onPress={() => setCues(items => [...items, { id: "cue-" + Date.now(), label: "", aliases: [""], color: defaultCues[items.length % defaultCues.length].color, category: "other", emoji: "✨" }])} />
+        <Button label="Add a tile" variant="secondary" disabled={busy || cues.length >= 16} onPress={() => setCues(items => [...items, { id: "cue-" + Date.now(), label: "", aliases: [""], color: defaultCues[items.length % defaultCues.length].color, category: "Life Admin", emoji: "N" }])} />
         <Button label="Save evening tiles" disabled={busy} onPress={() => void saveCues()} />
         <Button label="Cancel tile edits" variant="ghost" disabled={busy} onPress={() => setEditing(false)} />
       </>}

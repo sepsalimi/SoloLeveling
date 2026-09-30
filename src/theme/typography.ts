@@ -1,25 +1,25 @@
-// Expressive type faces: CSS family names on web, Expo font module names on native.
+// Expressive web stacks with platform-native faces when bundled fonts are unavailable.
 import { Platform } from "react-native";
 
 export const fonts = {
   display: Platform.select({
     web: "Fraunces, Georgia, \"Times New Roman\", serif",
-    default: "Fraunces_800ExtraBold"
+    default: "System"
   })!,
   displayBold: Platform.select({
     web: "Fraunces, Georgia, \"Times New Roman\", serif",
-    default: "Fraunces_700Bold"
+    default: "System"
   })!,
   body: Platform.select({
     web: "\"Source Sans 3\", \"Source Sans Pro\", Helvetica, Arial, sans-serif",
-    default: "SourceSans3_400Regular"
+    default: "System"
   })!,
   bodySemi: Platform.select({
     web: "\"Source Sans 3\", \"Source Sans Pro\", Helvetica, Arial, sans-serif",
-    default: "SourceSans3_600SemiBold"
+    default: "System"
   })!,
   bodyBold: Platform.select({
     web: "\"Source Sans 3\", \"Source Sans Pro\", Helvetica, Arial, sans-serif",
-    default: "SourceSans3_700Bold"
+    default: "System"
   })!
 };

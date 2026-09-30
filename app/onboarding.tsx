@@ -1,3 +1,4 @@
+// Short privacy and reminder setup before the conversational planner opens.
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Switch, useColorScheme, View } from "react-native";
 import { router } from "expo-router";
@@ -8,9 +9,8 @@ import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
 import { defaultPreferences } from "@/data/sample";
 import { palette, surfaces } from "@/theme/colors";
-import { requestNotificationPermission, syncReminders } from "@/services/reminders";
+import { scheduleDailyReminders } from "@/services/reminders";
 import { Input } from "@/components/Input";
-import { BrandMark } from "@/components/BrandMark";
 import { Ionicons } from "@expo/vector-icons";
 
 const days = [
@@ -31,14 +31,9 @@ export default function OnboardingScreen() {
 
   async function continueToApp() {
     try {
-      let notificationsEnabled = draft.notificationsEnabled;
-      if (notificationsEnabled && !(await requestNotificationPermission())) {
-        notificationsEnabled = false;
-        Alert.alert("Notifications are off", "You can enable reminders later in Settings.");
-      }
-      const completed = { ...draft, notificationsEnabled, onboardingCompleted: true };
+      const completed = { ...draft, onboardingCompleted: true };
+      await scheduleDailyReminders(completed);
       await updatePreferences(completed);
-      await syncReminders(completed);
       router.replace("/(tabs)/home");
     } catch (error) {
       Alert.alert("Could not finish setup", error instanceof Error ? error.message : "Check your reminder times and connection.");
@@ -51,16 +46,14 @@ export default function OnboardingScreen() {
       <Card>
         <Text variant="heading">Morning and evening</Text>
         <Toggle label="Show my morning plan" value={draft.morningPlanEnabled ?? false} onValueChange={(value) => setDraft({ ...draft, morningPlanEnabled: value })} />
-        <TextInput
+        <Input
           value={draft.morningReminderTime}
           onChangeText={(value) => setDraft({ ...draft, morningReminderTime: value })}
-          style={styles.input}
           accessibilityLabel="Morning reminder time"
         />
-        <TextInput
+        <Input
           value={draft.eveningReminderTime}
           onChangeText={(value) => setDraft({ ...draft, eveningReminderTime: value })}
-          style={styles.input}
           accessibilityLabel="Evening reminder time"
         />
         <View style={styles.days}>
@@ -110,10 +103,10 @@ export default function OnboardingScreen() {
   );
 }
 
-function Toggle({ label, detail, value, onValueChange }: { label: string; detail: string; value: boolean; onValueChange: (value: boolean) => void }) {
+function Toggle({ label, detail, value, onValueChange }: { label: string; detail?: string; value: boolean; onValueChange: (value: boolean) => void }) {
   return (
     <View style={styles.toggle}>
-      <View style={styles.toggleCopy}><Text variant="label">{label}</Text><Text variant="caption">{detail}</Text></View>
+      <View style={styles.toggleCopy}><Text variant="label">{label}</Text>{detail && <Text variant="caption">{detail}</Text>}</View>
       <Switch accessibilityLabel={label} value={value} onValueChange={onValueChange} trackColor={{ false: palette.line, true: palette.mint }} thumbColor={value ? palette.forest : "#FFFFFF"} />
     </View>
   );
