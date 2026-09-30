@@ -64,6 +64,7 @@ Database migrations remain a deliberate manual operation. Frontend or function d
 
 ## Current external validation limits
 
+- The Pages build passes, but the `github-pages` environment currently rejects deployments from `codex/phone-preview-20260928`. Allow this branch in the environment deployment rules, then rerun the Pages workflow.
 - A real signed-in DeepSeek response still needs an account with confirmed email and provider credit.
 - Remote migration application and cross-device sync need project access.
 - Native microphone capture and scheduled notifications need a physical iOS or Android device.
