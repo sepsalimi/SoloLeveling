@@ -3,7 +3,7 @@ import { continuousSpeech, Recognition } from "@/lib/continuousSpeech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform, Pressable, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Audio } from "expo-av";
+import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder } from "expo-audio";
 import { File } from "expo-file-system";
 import { useFocusEffect } from "expo-router";
 import { Button } from "./Button";
@@ -24,17 +24,24 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, onComplete, 
   const [state, setState] = useState<VoiceState>("idle");
   const [message, setMessage] = useState("");
   const recognition = useRef<ReturnType<typeof continuousSpeech> | null>(null);
-  const recording = useRef<Audio.Recording | null>(null);
+  const nativeRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const nativeActive = useRef(false);
   const mounted = useRef(true);
   const busy = useRef(false);
   const stopping = useRef(false);
   const { height } = useWindowDimensions();
   const micSize = height < 740 ? 112 : 176;
   const generation = useRef(0);
-  const completeCallback = useRef(onComplete); completeCallback.current = onComplete;
-  const callback = useRef(onTranscript); callback.current = onTranscript;
-  const interimCallback = useRef(onInterim); interimCallback.current = onInterim;
-  const statusCallback = useRef(onStateChange); statusCallback.current = onStateChange;
+  const completeCallback = useRef(onComplete);
+  const callback = useRef(onTranscript);
+  const interimCallback = useRef(onInterim);
+  const statusCallback = useRef(onStateChange);
+  useEffect(() => {
+    completeCallback.current = onComplete;
+    callback.current = onTranscript;
+    interimCallback.current = onInterim;
+    statusCallback.current = onStateChange;
+  }, [onComplete, onInterim, onStateChange, onTranscript]);
   useEffect(() => { statusCallback.current?.(state); }, [state]);
   const removeAudio = useCallback((uri: string | null) => { if (uri && Platform.OS !== "web") { try { new File(uri).delete(); } catch { /* Temporary cache cleanup can be retried by the OS. */ } } }, []);
   const cancel = useCallback(async (reason?: string) => {
@@ -42,14 +49,18 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, onComplete, 
     const speech = recognition.current; recognition.current = null;
     speech?.abort(); generation.current++;
     interimCallback.current?.("");
-    const current = recording.current; recording.current = null;
-    if (current) { await current.stopAndUnloadAsync().catch(() => {}); removeAudio(current.getURI()); await Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => {}); }
+    if (nativeActive.current) {
+      nativeActive.current = false;
+      await nativeRecorder.stop();
+      removeAudio(nativeRecorder.uri);
+      await setAudioModeAsync({ allowsRecording: false });
+    }
     if (mounted.current) {
       setState("idle");
       if (reason) setMessage(reason);
     }
     statusCallback.current?.("idle");
-  }, [removeAudio]);
+  }, [nativeRecorder, removeAudio]);
   useEffect(() => {
     mounted.current = true;
     const subscription = AppState.addEventListener("change", next => {
@@ -62,14 +73,14 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, onComplete, 
     if (stopping.current) return;
     stopping.current = true;
     if (recognition.current) { setState("processing"); recognition.current.stop(); return; }
-    const current = recording.current; recording.current = null;
-    if (!current) return;
+    if (!nativeActive.current) return;
+    nativeActive.current = false;
     const token = generation.current;
     setState("processing");
     try {
-      await current.stopAndUnloadAsync();
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-      const uri = current.getURI();
+      await nativeRecorder.stop();
+      await setAudioModeAsync({ allowsRecording: false });
+      const uri = nativeRecorder.uri;
       if (!uri || !supabase) throw new Error("Voice transcription is unavailable. You can type below.");
       const form = new FormData();
       form.append("file", { uri, name: "check-in.m4a", type: "audio/m4a" } as unknown as Blob);
@@ -77,7 +88,7 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, onComplete, 
       if (error || !data?.transcript) throw new Error("Could not transcribe this recording. Please try again or type below.");
       if (mounted.current && token === generation.current) { callback.current(data.transcript); completeCallback.current?.(); }
     } catch (error) { if (mounted.current && token === generation.current) setMessage(error instanceof Error ? error.message : "Recording failed."); }
-    finally { removeAudio(current.getURI()); if (mounted.current && token === generation.current) setState("idle"); }
+    finally { removeAudio(nativeRecorder.uri); if (mounted.current && token === generation.current) setState("idle"); }
   }
   async function start() {
     if (busy.current || state !== "idle") return;
@@ -105,12 +116,19 @@ export function TaskVoice({ onTranscript, onInterim, onStateChange, onComplete, 
         return;
       } else {
         if (!supabase) throw new Error("Native voice transcription needs a connected backend. You can also use your keyboard’s dictation or type below.");
-        if (!(await Audio.requestPermissionsAsync()).granted) throw new Error("Microphone access was denied. You can type below.");
+        if (!(await AudioModule.requestRecordingPermissionsAsync()).granted) throw new Error("Microphone access was denied. You can type below.");
         if (token !== generation.current) return;
-        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-        const result = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-        if (token !== generation.current) { await result.recording.stopAndUnloadAsync(); removeAudio(result.recording.getURI()); await Audio.setAudioModeAsync({ allowsRecordingIOS: false }); return; }
-        recording.current = result.recording;
+        await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+        await nativeRecorder.prepareToRecordAsync();
+        nativeRecorder.record();
+        nativeActive.current = true;
+        if (token !== generation.current) {
+          nativeActive.current = false;
+          await nativeRecorder.stop();
+          removeAudio(nativeRecorder.uri);
+          await setAudioModeAsync({ allowsRecording: false });
+          return;
+        }
       }
       if (!mounted.current || token !== generation.current) { await cancel(); return; }
       setState("recording");
