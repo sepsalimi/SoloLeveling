@@ -1,9 +1,11 @@
 // Conversational planner with linked projects, dated views, recurrence, and optional task details.
 import { useCallback, useMemo, useState } from "react";
 import { Pressable, StyleSheet, TextInput, useColorScheme, View } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { CompletableTaskCard } from "@/components/CompletableTaskCard";
 import { LifeCapture } from "@/components/LifeCapture";
 import { Screen } from "@/components/Screen";
 import { TaskPie } from "@/components/TaskPie";
@@ -11,7 +13,6 @@ import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
 import { addDays, isoDate } from "@/lib/dates";
 import { completeTaskOccurrence, expandOccurrences, occurrenceId, taskOccursOn } from "@/lib/recurrence";
-import { taskType } from "@/lib/tasks";
 import { loadLifePlan, saveLifePlan, syncLifePlan } from "@/services/taskStore";
 import { emptyLifePlan, lifeAreas, LifePlan, LifeTask, Project } from "@/types/life";
 import { palette, surfaces } from "@/theme/colors";
@@ -72,17 +73,25 @@ export default function TasksScreen() {
 
   async function complete(task: LifeTask) {
     const date = view === "Tomorrow" ? tomorrow : today;
-    await persist(completeTaskOccurrence(plan, task.id, date));
+    try {
+      await persist(completeTaskOccurrence(plan, task.id, date));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not complete this task.");
+    }
   }
 
   return (
     <Screen>
       <View style={styles.header}>
-        <View style={{ flex: 1, gap: 6 }}>
+        <View style={styles.headerTop}>
           <Text variant="eyebrow">Plan</Text>
-          <Text variant="display">Make room in your head.</Text>
-          <Text style={{ color: theme.softText }}>Speak naturally. Goals, projects, recurring work, and next actions stay connected.</Text>
+          <View style={styles.utilityRow}>
+            <UtilityLink label="History" icon="time-outline" onPress={() => router.push("/(tabs)/history")} />
+            <UtilityLink label="Settings" icon="settings-outline" onPress={() => router.push("/(tabs)/settings")} />
+          </View>
         </View>
+        <Text variant="display">Make room in your head.</Text>
+        <Text style={{ color: theme.softText }}>Speak naturally. Goals, projects, recurring work, and next actions stay connected.</Text>
       </View>
 
       <LifeCapture plan={plan} onPlan={(next) => setPlan(expandOccurrences(next, today, isoDate(addDays(new Date(), 31))))} />
@@ -157,30 +166,27 @@ export default function TasksScreen() {
           .filter((item) => item.taskId === task.id && item.status === "done")
           .sort((a, b) => b.scheduledFor.localeCompare(a.scheduledFor))[0];
         return (
-          <Card key={task.id} variant="outline">
-            <View style={styles.taskTitle}>
-              <View style={{ flex: 1, gap: 5 }}>
-                <Text variant="heading">{task.title}</Text>
-                <Text variant="caption">
-                  {task.category} · {task.priority} · {task.estimatedHours == null ? "estimate pending" : `${task.estimatedHours} h planned`}
-                </Text>
-              </View>
-              <Text variant="caption">{taskType(task.priority, task.estimatedHours)}</Text>
-            </View>
-            <Text variant="caption">
-              {project ? `${project.title} · ` : ""}
-              {task.dueDate ? `Due ${task.dueDate}` : "No hard deadline"}
-              {task.recurrence ? ` · ${task.recurrence.frequency}` : ""}
-              {view === "Completed" && completedOccurrence ? ` · completed ${completedOccurrence.scheduledFor}` : ""}
-            </Text>
-            <View style={styles.shortcutRow}>
-              {view !== "Completed" && <Button label="Complete" compact variant="secondary" onPress={() => void complete(task)} />}
-              <Button label="Edit details" compact variant="ghost" onPress={() => setEditing({ ...task })} />
-            </View>
-          </Card>
+          <CompletableTaskCard
+            key={task.id}
+            task={task}
+            project={project}
+            completedOn={view === "Completed" ? completedOccurrence?.scheduledFor : undefined}
+            onComplete={view === "Completed" ? undefined : () => complete(task)}
+            onEdit={() => setEditing({ ...task })}
+          />
         );
       })}
     </Screen>
+  );
+}
+
+function UtilityLink({ label, icon, onPress }: { label: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void }) {
+  const dark = useColorScheme() === "dark";
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={[styles.utility, { backgroundColor: surfaces(dark).chip }]}>
+      <Ionicons name={icon} size={17} color={dark ? palette.mint : palette.teal} />
+      <Text variant="caption">{label}</Text>
+    </Pressable>
   );
 }
 
@@ -266,7 +272,10 @@ function TaskEditor({ task, projects, onChange }: { task: LifeTask; projects: Pr
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: "row", gap: 16, alignItems: "flex-start" },
+  header: { gap: 6 },
+  headerTop: { minHeight: 36, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  utilityRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 6 },
+  utility: { minHeight: 36, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, borderRadius: 12 },
   section: { gap: 8, marginTop: 8 },
   shortcutRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   choice: { minHeight: 42, justifyContent: "center", paddingHorizontal: 13, borderRadius: 14, backgroundColor: "#DDEBE4" },
@@ -277,6 +286,5 @@ const styles = StyleSheet.create({
   projectMark: { width: 36, height: 8, borderRadius: 4 },
   progress: { height: 6, borderRadius: 3, backgroundColor: "#DDD6C8", overflow: "hidden" },
   progressFill: { height: 6, borderRadius: 3 },
-  taskTitle: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   input: { minHeight: 50, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, fontSize: 16 },
 });

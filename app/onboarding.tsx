@@ -34,7 +34,7 @@ export default function OnboardingScreen() {
       const completed = { ...draft, onboardingCompleted: true };
       await scheduleDailyReminders(completed);
       await updatePreferences(completed);
-      router.replace("/(tabs)/home");
+      router.replace("/(tabs)/tasks");
     } catch (error) {
       Alert.alert("Could not finish setup", error instanceof Error ? error.message : "Check your reminder times and connection.");
     }

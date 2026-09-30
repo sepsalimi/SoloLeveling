@@ -1,4 +1,4 @@
-// Single-viewport morning and explicit-stop voice check-in with recoverable, date-anchored drafts.
+// Auth-gated, single-viewport check-in with quiet explicit-stop capture and recoverable drafts.
 import { InstallApp } from "@/components/InstallApp";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
@@ -45,7 +45,7 @@ export default function CheckInScreen() {
   const capturedAt = useRef(initialAnchor.capturedAt);
   const date = useRef(initialAnchor.date);
   const saveLock = useRef(false);
-  const { preferences, saveEvening, storageError } = useAppState();
+  const { preferences, saveEvening, storageError, user } = useAppState();
   const cues = useMemo(() => {
     const base = preferences?.activityCues ?? defaultCues;
     return [...base, ...planCues.filter((cue) => !base.some((item) => item.label.toLowerCase() === cue.label.toLowerCase()))].slice(0, 10);
@@ -148,8 +148,12 @@ export default function CheckInScreen() {
       </View> : <>
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{capturing ? "YOUR MOMENT. NO INTERRUPTIONS." : "A MOMENT FOR YOU"}</Text>
-          <Text style={[styles.title, small && { fontSize: 30, lineHeight: 36 }]}>{capturing ? "I'm listening." : question || (text ? "That's your day." : "How was your day?")}</Text>
-          <Text style={styles.subtitle}>{capturing ? "Watch your day fall into place." : question ? "Answer by voice. Your original check-in and date anchor are kept." : text ? "Tap to add more, or let AI process your day." : "Tap to talk. Tap again when you're done."}</Text>
+          <Text style={[styles.title, small && { fontSize: 30, lineHeight: 36 }]}>
+            {capturing ? "I'm listening." : !user ? "Sign in to check in." : question || (text ? "That's your day." : "How was your day?")}
+          </Text>
+          <Text style={styles.subtitle}>
+            {capturing ? "Watch your day fall into place." : !user ? "Private reasoning needs an account before recording, so your words never end in a dead end." : question ? "Answer by voice. Your original check-in and date anchor are kept." : text ? "Tap to add more, or let AI process your day." : "Tap to talk. Tap again when you're done."}
+          </Text>
         </View>
         <View style={[styles.stage, small && { gap: 8 }]}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 48 }} contentContainerStyle={styles.cues}>{showCues && cues.map(cue => {
@@ -158,13 +162,17 @@ export default function CheckInScreen() {
               <Text numberOfLines={1} style={{ color: state ? "#D1CDD8" : "#211B30", fontWeight: "700", fontSize: small ? 12 : 14, lineHeight: small ? 18 : 20 }}>{state ? state.toUpperCase() : cue.emoji} · {cue.label}</Text>
             </View>;
           })}</ScrollView>
-          {saving ? <View style={{ alignItems: "center", gap: 16 }}><Ionicons name="sparkles" size={64} color="#C4B5FD" /><Text style={styles.subtitle}>Making sense of your day…</Text><Text style={styles.subtle}>Activities and time are saved automatically.</Text></View> : !restoring && <TaskVoice largeMicrophone compact onStateChange={setVoice} onInterim={setInterim} onComplete={() => void process()} onTranscript={part => changeText((transcript.current + " " + part).trim())} />}
+          {!user
+            ? <View style={styles.signInGate}><Ionicons name="lock-closed-outline" size={38} color="#C4B5FD" />{action("Sign in to start", () => router.push("/auth"))}</View>
+            : saving
+              ? <View style={{ alignItems: "center", gap: 16 }}><Ionicons name="sparkles" size={64} color="#C4B5FD" /><Text style={styles.subtitle}>Making sense of your day…</Text><Text style={styles.subtle}>Activities and time are saved automatically.</Text></View>
+              : !restoring && <TaskVoice largeMicrophone compact onStateChange={setVoice} onInterim={setInterim} onComplete={() => void process()} onTranscript={part => changeText((transcript.current + " " + part).trim())} />}
           <Text accessibilityLabel="Live transcript" numberOfLines={small ? 2 : 3} style={[styles.transcript, { minHeight: small ? 44 : 66 }]}>{text} {interim}</Text>
         </View>
         <View style={styles.footer}>
           {typing && !capturing && <TextInput accessibilityLabel="Evening transcript" value={text} onChangeText={changeText} editable={!capturing} multiline placeholder="What did you do, and for how long?" placeholderTextColor="#9A96AC" style={[styles.input, { height: small ? 66 : 90 }]} />}
           <View style={{ height: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          {!saving && !!text.trim() && action(question ? "Answer and continue" : message ? "Retry processing" : "Process my day  ↗", () => void process(), capturing || restoring)}
+          {user && !saving && !!text.trim() && action(question ? "Answer and continue" : message ? "Retry processing" : "Process my day  ↗", () => void process(), capturing || restoring)}
           <Pressable accessibilityRole="button" disabled={capturing || saving} style={{ opacity: capturing || saving ? 0 : 1 }} onPress={() => setTyping(!typing)}><Text style={styles.link}>{typing ? "Close keyboard" : "Prefer to type?"}</Text></Pressable></View>
           <Text style={styles.privacy}>{capturing ? "Tap to finish · silent visual feedback" : "Just your voice. A little space to reflect."}</Text>
           {message.startsWith("Sign in") && action("Sign in", () => router.push("/auth"))}
@@ -187,6 +195,7 @@ const styles = StyleSheet.create({
   title: { color: "#FAF8FF", fontSize: 36, lineHeight: 42, fontWeight: "800", textAlign: "center", letterSpacing: -1.2 },
   subtitle: { color: "#ABA5BC", fontSize: 14, textAlign: "center", lineHeight: 21 },
   stage: { flex: 1, minHeight: 0, alignItems: "center", justifyContent: "center", gap: 18 },
+  signInGate: { alignItems: "center", gap: 16 },
   cues: { flexDirection: "row", gap: 8, paddingHorizontal: 4 },
   cue: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 14, maxWidth: 190 },
   transcript: { color: "#E2DAF4", fontSize: 15, lineHeight: 22, textAlign: "center", width: "100%" },

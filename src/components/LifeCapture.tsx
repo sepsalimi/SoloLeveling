@@ -1,6 +1,8 @@
-// Conversational life setup that saves organized goals, projects, and tasks without a review queue.
+// Authenticated conversational setup that saves goals, projects, and tasks without a review queue.
 import { useRef, useState } from "react";
 import { TextInput, useColorScheme, View } from "react-native";
+import { router } from "expo-router";
+import { useAppState } from "@/context/AppState";
 import { systemTimeZone } from "@/lib/dates";
 import { organizeLife } from "@/services/reasoning";
 import { saveLifePlan } from "@/services/taskStore";
@@ -12,6 +14,7 @@ import { TaskVoice } from "./TaskVoice";
 import { Text } from "./Text";
 
 export function LifeCapture({ plan, onPlan }: { plan: LifePlan; onPlan: (plan: LifePlan) => void }) {
+  const { user } = useAppState();
   const [text, setText] = useState("");
   const [question, setQuestion] = useState<string>();
   const [message, setMessage] = useState("");
@@ -65,31 +68,40 @@ export function LifeCapture({ plan, onPlan }: { plan: LifePlan; onPlan: (plan: L
           Tell me what you are working toward and what needs doing. Mention urgency, roughly how long something takes, or a deadline if you know. It is okay to leave details out.
         </Text>
       </View>
-      <TaskVoice
-        startLabel={question ? "Answer by voice" : "Tell me what is on your mind"}
-        listeningHint="Speak naturally. Tap Finish when you are done."
-        onTranscript={(part) => changeText(`${textRef.current} ${part}`.trim())}
-        onComplete={() => void submit()}
-      />
-      <TextInput
-        accessibilityLabel="Life update"
-        multiline
-        editable={!busy}
-        value={text}
-        onChangeText={changeText}
-        placeholder={question ? "Answer the question, or add a correction..." : "Type instead..."}
-        placeholderTextColor="#8FA29C"
-        style={{
-          minHeight: 92,
-          borderWidth: 1,
-          borderColor: dark ? palette.darkLine : "#49665F",
-          borderRadius: 16,
-          padding: 14,
-          color: "#FFFFFF",
-          textAlignVertical: "top",
-        }}
-      />
-      <Button label={busy ? "Organizing..." : "Organize and save"} disabled={busy || !text.trim()} onPress={() => void submit()} />
+      {user ? (
+        <>
+          <TaskVoice
+            startLabel={question ? "Answer by voice" : "Tell me what is on your mind"}
+            listeningHint="Speak naturally. Tap Finish when you are done."
+            onTranscript={(part) => changeText(`${textRef.current} ${part}`.trim())}
+            onComplete={() => void submit()}
+          />
+          <TextInput
+            accessibilityLabel="Life update"
+            multiline
+            editable={!busy}
+            value={text}
+            onChangeText={changeText}
+            placeholder={question ? "Answer the question, or add a correction..." : "Type instead..."}
+            placeholderTextColor="#8FA29C"
+            style={{
+              minHeight: 92,
+              borderWidth: 1,
+              borderColor: dark ? palette.darkLine : "#49665F",
+              borderRadius: 16,
+              padding: 14,
+              color: "#FFFFFF",
+              textAlignVertical: "top",
+            }}
+          />
+          <Button label={busy ? "Organizing..." : "Organize and save"} disabled={busy || !text.trim()} onPress={() => void submit()} />
+        </>
+      ) : (
+        <View style={{ gap: 10 }}>
+          <Text style={{ color: "#D7E4DF" }}>Sign in before speaking so private reasoning can organize and save your plan.</Text>
+          <Button label="Sign in to plan" icon="log-in-outline" variant="secondary" onPress={() => router.push("/auth")} />
+        </View>
+      )}
       {!!message && <Text accessibilityRole="alert" style={{ color: message.startsWith("Saved") ? palette.mint : "#FFB5C4" }}>{message}</Text>}
     </Card>
   );

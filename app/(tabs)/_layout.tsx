@@ -1,4 +1,4 @@
-// Four primary destinations with history and settings kept as secondary routes.
+// Three primary destinations with today, history, and settings kept as secondary routes.
 import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,8 +29,8 @@ export default function TabsLayout() {
         }
       }}
     >
-      <Tabs.Screen name="home" options={{ title: "Today", tabBarIcon: ({ color }) => <Ionicons name="today-outline" size={22} color={color} /> }} />
-      <Tabs.Screen name="tasks" options={{ title: "Tasks", tabBarIcon: ({ color }) => <Ionicons name="checkbox-outline" size={22} color={color} /> }} />
+      <Tabs.Screen name="home" options={{ href: null }} />
+      <Tabs.Screen name="tasks" options={{ title: "Plan", tabBarIcon: ({ color }) => <Ionicons name="list-outline" size={22} color={color} /> }} />
       <Tabs.Screen name="check-in" options={{ title: "Check in", tabBarStyle: { backgroundColor: "#111019", borderTopColor: "#292432", minHeight: 64, paddingTop: 6 }, tabBarActiveTintColor: "#C4B5FD", tabBarInactiveTintColor: "#8D859E", tabBarIcon: ({ color }) => <Ionicons name="mic-outline" size={22} color={color} /> }} />
       <Tabs.Screen name="analytics" options={{ title: "Analytics", tabBarIcon: ({ color }) => <Ionicons name="bar-chart-outline" size={22} color={color} /> }} />
       <Tabs.Screen name="history" options={{ href: null }} />

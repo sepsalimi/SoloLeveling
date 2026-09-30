@@ -14,7 +14,7 @@ export default function Index() {
     if (!ready) return;
     if (isSupabaseConfigured && !user) router.replace("/auth");
     else if (!preferences?.onboardingCompleted) router.replace("/onboarding");
-    else router.replace("/(tabs)/home");
+    else router.replace("/(tabs)/tasks");
   }, [preferences?.onboardingCompleted, ready, user]);
 
   return (
