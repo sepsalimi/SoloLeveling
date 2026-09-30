@@ -1,8 +1,8 @@
-name: Deploy Expo Web to GitHub Pages
+name: Publish product web app
 
 on:
   push:
-    branches: [main]
+    branches: [codex/phone-preview-20260928]
   workflow_dispatch:
 
 permissions:
@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: codex/phone-preview-20260928
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -39,13 +41,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Export Expo web app
-        run: pnpm export:web
+      - name: Verify and export Expo web app
+        run: pnpm typecheck && pnpm test && pnpm export:web && node scripts/prepare-pages.mjs
         env:
-          EXPO_PUBLIC_LOCAL_MODE: "true"
-
-      - name: Disable Jekyll for Expo assets
-        run: touch dist/.nojekyll
+          EXPO_PUBLIC_DEMO_MODE: "true"
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
@@ -53,7 +54,6 @@ jobs:
           path: dist
 
   deploy:
-    if: github.event_name == 'push'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
