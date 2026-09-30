@@ -1,4 +1,4 @@
-// Exercises authentication, current DeepSeek request shape, and server-side output validation.
+// Exercises authentication, per-user limits, DeepSeek request shape, and server-side output validation.
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
@@ -24,11 +24,18 @@ function server(key = "test-key", authStatus = 200, result: unknown = {
       reasoning_content: "private reasoning",
     },
   }],
-}) {
-  const fetch = vi.fn().mockResolvedValueOnce(new Response("{}", { status: authStatus })).mockResolvedValueOnce(Response.json(result));
+}, rateLimited = false) {
+  const fetch = vi.fn().mockResolvedValueOnce(Response.json({ id: "user-1" }, { status: authStatus })).mockResolvedValueOnce(Response.json(result));
+  const enforceRateLimit = vi.fn(() => {
+    if (rateLimited) throw new Error("Too many requests. Wait a moment and try again.");
+  });
   let handler: (req: Request) => Promise<Response>;
   runInNewContext(source, {
     exports: {},
+    require: (path: string) => {
+      if (path === "../_shared/rateLimit.ts") return { enforceRateLimit };
+      throw new Error(`Unexpected import: ${path}`);
+    },
     Deno: {
       env: {
         get: (name: string) => name === "DEEPSEEK_API_KEY" ? key : name === "DEEPSEEK_MODEL" ? undefined : name === "SUPABASE_URL" ? "https://example.supabase.co" : "test-anon",
@@ -41,6 +48,7 @@ function server(key = "test-key", authStatus = 200, result: unknown = {
   });
   return {
     fetch,
+    enforceRateLimit,
     call: () => handler(new Request("https://example.com", {
       method: "POST",
       headers: { Authorization: "Bearer user-session" },
@@ -65,6 +73,16 @@ it("reports missing server secrets without calling the provider", async () => {
   const app = server("");
   expect((await app.call()).status).toBe(503);
   expect(app.fetch).toHaveBeenCalledTimes(1);
+});
+
+it("rate limits paid extraction by authenticated user", async () => {
+  const app = server();
+  expect((await app.call()).status).toBe(200);
+  expect(app.enforceRateLimit).toHaveBeenCalledWith("reason-check-in:user-1", 10, 60_000);
+
+  const limited = server("test", 200, undefined, true);
+  expect((await limited.call()).status).toBe(429);
+  expect(limited.fetch).toHaveBeenCalledTimes(1);
 });
 
 it("uses the current configurable model and returns no reasoning trace", async () => {

@@ -1,4 +1,4 @@
-// Exercises authenticated conversational organization and strict plan-output validation.
+// Exercises authenticated, rate-limited conversational organization and strict plan-output validation.
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
@@ -27,13 +27,20 @@ const result = {
   clarificationQuestion: null,
 };
 
-function server(output: unknown = result, authStatus = 200) {
+function server(output: unknown = result, authStatus = 200, rateLimited = false) {
   const fetch = vi.fn()
-    .mockResolvedValueOnce(new Response("{}", { status: authStatus }))
+    .mockResolvedValueOnce(Response.json({ id: "user-1" }, { status: authStatus }))
     .mockResolvedValueOnce(Response.json({ choices: [{ finish_reason: "stop", message: { content: JSON.stringify(output) } }] }));
+  const enforceRateLimit = vi.fn(() => {
+    if (rateLimited) throw new Error("Too many requests. Wait a moment and try again.");
+  });
   let handler: (request: Request) => Promise<Response>;
   runInNewContext(source, {
     exports: {},
+    require: (path: string) => {
+      if (path === "../_shared/rateLimit.ts") return { enforceRateLimit };
+      throw new Error(`Unexpected import: ${path}`);
+    },
     Deno: {
       env: { get: (name: string) => name === "DEEPSEEK_API_KEY" ? "key" : name === "SUPABASE_URL" ? "https://example.supabase.co" : name === "DEEPSEEK_MODEL" ? undefined : "anon" },
       serve: (fn: typeof handler) => handler = fn,
@@ -52,7 +59,7 @@ function server(output: unknown = result, authStatus = 200) {
       current: { goals: [], projects: [], tasks: [] },
     }),
   }));
-  return { call, fetch };
+  return { call, fetch, enforceRateLimit };
 }
 
 it("authenticates before organizing personal context", async () => {
@@ -68,6 +75,16 @@ it("returns validated goals, projects, and tasks with the current model", async 
   const body = await response.json();
   expect(body.tasks[0]).toMatchObject({ title: "Update resume", dueDate: null, prioritySource: "inferred" });
   expect(body.model).toBe("deepseek-v4-flash");
+});
+
+it("rate limits paid planning by authenticated user", async () => {
+  const app = server();
+  expect((await app.call()).status).toBe(200);
+  expect(app.enforceRateLimit).toHaveBeenCalledWith("reason-life:user-1", 10, 60_000);
+
+  const limited = server(result, 200, true);
+  expect((await limited.call()).status).toBe(429);
+  expect(limited.fetch).toHaveBeenCalledTimes(1);
 });
 
 it("rejects fabricated or malformed dates", async () => {

@@ -1,4 +1,6 @@
-// Authenticated DeepSeek organizer for conversational goals, projects, tasks, and recurrence.
+// Authenticated, per-user-rate-limited DeepSeek organizer for goals, projects, tasks, and recurrence.
+import { enforceRateLimit } from "../_shared/rateLimit.ts";
+
 const areas = ["Life Admin","Finances","Leisure","Career","Health","Learning","Creative","Relationships"];
 const priorities = ["low","medium","high"];
 const sources = ["explicit","inferred"];
@@ -33,6 +35,9 @@ export async function handleRequest(req: Request) {
       signal: AbortSignal.timeout(10000),
     });
     if (!auth.ok) return reply({ error: "Sign in to organize your life plan." }, 401);
+    const user = await auth.json();
+    if (!user || typeof user.id !== "string" || !user.id) return reply({ error: "Sign in to organize your life plan." }, 401);
+    enforceRateLimit(`reason-life:${user.id}`, 10, 60_000);
     const key = Deno.env.get("DEEPSEEK_API_KEY");
     if (!key) return reply({ error: "DeepSeek is not configured on the server yet." }, 503);
     const raw = await req.text();
@@ -93,8 +98,12 @@ export async function handleRequest(req: Request) {
     }
     if (!result.contextNotes.every((note: unknown) => shortText(note, 500))) throw new Error("Invalid output");
     return reply({ ...result, model });
-  } catch {
-    return reply({ error: "Organization did not finish. Your words are safe; please retry." }, 502);
+  } catch (error) {
+    const rateLimited = error instanceof Error && error.message.startsWith("Too many requests");
+    return reply(
+      { error: rateLimited ? "Too many planning updates were submitted. Wait a moment and retry." : "Organization did not finish. Your words are safe; please retry." },
+      rateLimited ? 429 : 502,
+    );
   }
 }
 

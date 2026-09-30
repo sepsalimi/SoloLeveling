@@ -55,6 +55,7 @@ Planned task hours appear only in the planner chart.
 - Anonymous data is never silently attached to a later account.
 - Supabase tables use RLS with `auth.uid()`.
 - Edge functions authenticate the bearer session before paid inference.
+- Paid reasoning endpoints enforce a short per-user request window before contacting DeepSeek.
 - The client validates model dates and only accepts task/project IDs from the supplied account context.
 - API keys and reasoning traces never return to the client.
 - Native Supabase sessions use encrypted AsyncStorage payloads with their encryption key in SecureStore.

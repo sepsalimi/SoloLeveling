@@ -1,4 +1,6 @@
-// Authenticated DeepSeek extraction for multi-day actual activities and task progress.
+// Authenticated, per-user-rate-limited DeepSeek extraction for multi-day activities and task progress.
+import { enforceRateLimit } from "../_shared/rateLimit.ts";
+
 const categories = ["Life Admin","Finances","Leisure","Career","Health","Learning","Creative","Relationships"];
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: cors });
@@ -22,6 +24,9 @@ export async function handleRequest(req: Request) {
       signal: AbortSignal.timeout(10000),
     });
     if (!auth.ok) return reply({ error: "Sign in to process your check-in." }, 401);
+    const user = await auth.json();
+    if (!user || typeof user.id !== "string" || !user.id) return reply({ error: "Sign in to process your check-in." }, 401);
+    enforceRateLimit(`reason-check-in:${user.id}`, 10, 60_000);
     const key = Deno.env.get("DEEPSEEK_API_KEY");
     if (!key) return reply({ error: "DeepSeek is not configured on the server yet." }, 503);
     const raw = await req.text();
@@ -79,8 +84,12 @@ export async function handleRequest(req: Request) {
       clarificationQuestion: result.clarificationQuestion,
       model,
     });
-  } catch {
-    return reply({ error: "Processing did not finish. Your transcript is safe; please retry." }, 502);
+  } catch (error) {
+    const rateLimited = error instanceof Error && error.message.startsWith("Too many requests");
+    return reply(
+      { error: rateLimited ? "Too many check-ins were submitted. Wait a moment and retry." : "Processing did not finish. Your transcript is safe; please retry." },
+      rateLimited ? 429 : 502,
+    );
   }
 }
 Deno.serve(handleRequest);
