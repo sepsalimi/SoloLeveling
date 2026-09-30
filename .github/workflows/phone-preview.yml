@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           # Tested preview snapshot; newer application source remains on main.
-          ref: ebfffd7cb8c5fd622559220edf038d2e982a3c95
+          ref: 4534ca9da1ac121f6f9fc0c2a39899722a9fa70a
       - uses: pnpm/action-setup@v4
         with:
           version: 11.7.0
@@ -31,6 +31,8 @@ jobs:
       - run: pnpm export:web && node scripts/prepare-pages.mjs
         env:
           EXPO_PUBLIC_DEMO_MODE: "true"
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
