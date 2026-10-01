@@ -58,13 +58,12 @@ Set `DEEPSEEK_API_KEY` in Supabase Edge Function secrets. `DEEPSEEK_MODEL` is op
 
 ## Release source
 
-`codex/phone-preview-20260928` is the coherent product source. `.github/workflows/pages.yml` verifies and publishes that branch under `/SoloLeveling/`. `.github/workflows/deploy-reasoning.yml` deploys both reasoning functions with the repository secret `SUPABASE` mapped to `SUPABASE_ACCESS_TOKEN`.
+`main` is the coherent product source. `.github/workflows/pages.yml` verifies and publishes `main` under `/SoloLeveling/`. `.github/workflows/deploy-reasoning.yml` deploys both reasoning functions from `main` with the repository secret `SUPABASE` mapped to `SUPABASE_ACCESS_TOKEN`.
 
 Database migrations remain a deliberate manual operation. Frontend or function deployment does not apply them.
 
 ## Current external validation limits
 
-- The Pages build passes, but the `github-pages` environment currently rejects deployments from `codex/phone-preview-20260928`. Allow this branch in the environment deployment rules, then rerun the Pages workflow.
 - A real signed-in DeepSeek response still needs an account with confirmed email and provider credit.
 - Remote migration application and cross-device sync need project access.
 - Native microphone capture and scheduled notifications need a physical iOS or Android device.

@@ -17,7 +17,7 @@
 
 ## Operational follow-up
 
-- Allow `codex/phone-preview-20260928` in the `github-pages` environment deployment-branch rules, then rerun the already-successful Pages build.
+- Confirm the first `main` Pages deployment and direct-route refresh after the product merge.
 - Deploy both reasoning functions.
 - Apply the additive life-model migration only after remote schema inspection and backup review.
 - Retire older OpenAI example functions if production confirms they are unused.

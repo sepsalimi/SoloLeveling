@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: codex/phone-preview-20260928
+          ref: main
       - name: Check configuration
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || { echo "Add the SUPABASE_ACCESS_TOKEN repository secret."; exit 1; }

@@ -2,7 +2,7 @@ name: Publish product web app
 
 on:
   push:
-    branches: [codex/phone-preview-20260928]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -21,7 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: codex/phone-preview-20260928
+          ref: main
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

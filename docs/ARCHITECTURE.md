@@ -62,8 +62,8 @@ Planned task hours appear only in the planner chart.
 
 ## Deployment
 
-The product source is `codex/phone-preview-20260928`.
+The product source is `main`.
 
-- `pages.yml` checks out that branch, runs typecheck/tests/export, prepares route shells, and publishes GitHub Pages.
-- `deploy-reasoning.yml` checks out that branch and deploys `reason-check-in` plus `reason-life`.
+- `pages.yml` checks out `main`, runs typecheck/tests/export, prepares route shells, and publishes GitHub Pages.
+- `deploy-reasoning.yml` checks out `main` and deploys `reason-check-in` plus `reason-life`.
 - SQL migrations are reviewed and applied separately; function deployment never mutates the database.
