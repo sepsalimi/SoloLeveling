@@ -11,6 +11,9 @@ import { supabase } from "@/services/supabase";
 import { Input } from "@/components/Input";
 import { BrandMark } from "@/components/BrandMark";
 import { palette } from "@/theme/colors";
+import { agentDebug } from "@/lib/agentDebug";
+
+let authenticationAttempt = 0;
 
 export default function AuthScreen() {
   const [email, setEmail] = useState("");
@@ -18,33 +21,53 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
 
   async function authenticate(mode: "login" | "register") {
+    const attempt = ++authenticationAttempt;
+    // #region agent log
+    agentDebug({ hypothesisId: "A/B", location: "auth.tsx:authenticate", message: "Authentication action entered", data: { attempt, mode, configured: Boolean(supabase), hasEmail: Boolean(email.trim()), passwordLongEnough: password.length >= 8, loading } });
+    // #endregion
     if (!supabase) {
       router.replace("/onboarding");
       return;
     }
     if (!email.trim() || password.length < 8) {
+      // #region agent log
+      agentDebug({ hypothesisId: "B", location: "auth.tsx:validation", message: "Authentication blocked by local validation", data: { attempt, hasEmail: Boolean(email.trim()), passwordLongEnough: password.length >= 8 } });
+      // #endregion
       Alert.alert("Check your details", "Enter a valid email and a password with at least eight characters.");
       return;
     }
     setLoading(true);
-    const response =
-      mode === "login"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: Linking.createURL("/"),
-              data: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
-            }
-          });
-    setLoading(false);
-    if (response.error) {
-      Alert.alert("Authentication failed", response.error.message);
-    } else if (mode === "register" && !response.data.session) {
-      Alert.alert("Check your email", "Confirm your email address, then return here to sign in.");
-    } else {
-      router.replace("/");
+    try {
+      const response =
+        mode === "login"
+          ? await supabase.auth.signInWithPassword({ email, password })
+          : await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                emailRedirectTo: Linking.createURL("/"),
+                data: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
+              }
+            });
+      // #region agent log
+      agentDebug({ hypothesisId: "A/C", location: "auth.tsx:response", message: "Authentication request settled", data: { attempt, mode, hasError: Boolean(response.error), hasSession: Boolean(response.data.session), hasUser: Boolean(response.data.user) } });
+      // #endregion
+      setLoading(false);
+      if (response.error) {
+        Alert.alert("Authentication failed", response.error.message);
+      } else if (mode === "register" && !response.data.session) {
+        Alert.alert("Check your email", "Confirm your email address, then return here to sign in.");
+      } else {
+        // #region agent log
+        agentDebug({ hypothesisId: "C", location: "auth.tsx:route", message: "Authentication navigating to root", data: { attempt, mode } });
+        // #endregion
+        router.replace("/");
+      }
+    } catch (error) {
+      // #region agent log
+      agentDebug({ hypothesisId: "A", location: "auth.tsx:exception", message: "Authentication request threw", data: { attempt, mode, errorType: error instanceof Error ? error.name : typeof error } });
+      // #endregion
+      throw error;
     }
   }
 

@@ -5,6 +5,7 @@ import { ActivityEntry, CheckInSession, UserPreferences } from "@/types/activity
 import { exportData, loadActivities, loadPreferences, loadSessions, saveActivities, savePreferences, saveSessions } from "@/services/localStore";
 import { loadDailyCheckIns, persistDailyCheckIn, syncDailyCheckIns } from "@/services/dailyCheckIns";
 import { supabase } from "@/services/supabase";
+import { agentDebug } from "@/lib/agentDebug";
 
 type AppStateValue = {
   user: User | null;
@@ -44,6 +45,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       loadPreferences(),
       loadDailyCheckIns(),
     ]);
+    // #region agent log
+    agentDebug({ hypothesisId: "C/D", location: "AppState.tsx:reload", message: "Application auth hydration settled", data: { hasAuthResult: Boolean(auth), hasAuthError: Boolean(auth?.error), hasSession: Boolean(auth?.data.session) } });
+    // #endregion
     if (auth?.error) throw auth.error;
     setUser(auth?.data.session?.user ?? null);
     setActivities(entries);
@@ -66,7 +70,12 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         });
     };
     refresh();
-    const subscription = supabase?.auth.onAuthStateChange(() => { setTimeout(refresh, 0); });
+    const subscription = supabase?.auth.onAuthStateChange((event) => {
+      // #region agent log
+      agentDebug({ hypothesisId: "C", location: "AppState.tsx:onAuthStateChange", message: "Supabase auth state event received", data: { event } });
+      // #endregion
+      setTimeout(refresh, 0);
+    });
     return () => { active = false; generation++; subscription?.data.subscription.unsubscribe(); };
   }, [reload]);
 
