@@ -1,85 +1,91 @@
-// Supabase email authentication with an explicit local-preview path when no backend is configured.
-import { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+// Email and Google sign-in. A successful session leaves this screen only after app state has it.
+import { useEffect, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import * as Linking from "expo-linking";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
+import { useAppState } from "@/context/AppState";
 import { supabase } from "@/services/supabase";
+import { currentAuthReturnUrl } from "@/services/authCallback";
 import { Input } from "@/components/Input";
 import { BrandMark } from "@/components/BrandMark";
 import { palette } from "@/theme/colors";
-import { agentDebug } from "@/lib/agentDebug";
-
-let authenticationAttempt = 0;
 
 export default function AuthScreen() {
+  const { user, ready, preferences } = useAppState();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!ready || !user) return;
+    router.replace(preferences?.onboardingCompleted ? "/(tabs)/tasks" : "/onboarding");
+  }, [preferences?.onboardingCompleted, ready, user]);
 
   async function authenticate(mode: "login" | "register") {
-    const attempt = ++authenticationAttempt;
-    // #region agent log
-    agentDebug({ hypothesisId: "A/B", location: "auth.tsx:authenticate", message: "Authentication action entered", data: { attempt, mode, configured: Boolean(supabase), hasEmail: Boolean(email.trim()), passwordLongEnough: password.length >= 8, loading } });
-    // #endregion
     if (!supabase) {
       router.replace("/onboarding");
       return;
     }
     if (!email.trim() || password.length < 8) {
-      // #region agent log
-      agentDebug({ hypothesisId: "B", location: "auth.tsx:validation", message: "Authentication blocked by local validation", data: { attempt, hasEmail: Boolean(email.trim()), passwordLongEnough: password.length >= 8 } });
-      // #endregion
-      Alert.alert("Check your details", "Enter a valid email and a password with at least eight characters.");
+      setMessage("Enter a valid email and a password with at least eight characters.");
       return;
     }
     setLoading(true);
+    setMessage("");
     try {
-      const response =
-        mode === "login"
-          ? await supabase.auth.signInWithPassword({ email, password })
-          : await supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                emailRedirectTo: Linking.createURL("/"),
-                data: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
-              }
-            });
-      // #region agent log
-      agentDebug({ hypothesisId: "A/C", location: "auth.tsx:response", message: "Authentication request settled", data: { attempt, mode, hasError: Boolean(response.error), hasSession: Boolean(response.data.session), hasUser: Boolean(response.data.user) } });
-      // #endregion
-      setLoading(false);
-      if (response.error) {
-        Alert.alert("Authentication failed", response.error.message);
-      } else if (mode === "register" && !response.data.session) {
-        Alert.alert("Check your email", "Confirm your email address, then return here to sign in.");
-      } else {
-        // #region agent log
-        agentDebug({ hypothesisId: "C", location: "auth.tsx:route", message: "Authentication navigating to root", data: { attempt, mode } });
-        // #endregion
-        router.replace("/");
-      }
+      const response = mode === "login"
+        ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        : await supabase.auth.signUp({
+            email: email.trim(),
+            password,
+            options: {
+              emailRedirectTo: currentAuthReturnUrl(),
+              data: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+            },
+          });
+      if (response.error) setMessage(response.error.message);
+      else if (!response.data.session) setMessage("Check your email and confirm the address, then come back and sign in.");
     } catch (error) {
-      // #region agent log
-      agentDebug({ hypothesisId: "A", location: "auth.tsx:exception", message: "Authentication request threw", data: { attempt, mode, errorType: error instanceof Error ? error.name : typeof error } });
-      // #endregion
-      throw error;
+      setMessage(error instanceof Error ? error.message : "Sign-in did not finish. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function signInWithGoogle() {
+    if (!supabase) {
+      router.replace("/onboarding");
+      return;
+    }
+    setLoading(true);
+    setMessage("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: currentAuthReturnUrl(), queryParams: { prompt: "select_account" } },
+    });
+    if (error) {
+      setMessage(error.message.includes("provider") ? "Google sign-in is not enabled for this project yet." : error.message);
+      setLoading(false);
     }
   }
 
   async function resetPassword() {
     if (!supabase) {
-      Alert.alert("Demo mode", "Password reset is available once Supabase environment variables are configured.");
+      setMessage("Password reset is available once the account service is configured.");
       return;
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: Linking.createURL("/reset-password")
-    });
-    Alert.alert(error ? "Password reset failed" : "Check your email", error?.message ?? "A reset link has been sent.");
+    if (!email.trim()) {
+      setMessage("Enter your email first, then ask for the reset link.");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: currentAuthReturnUrl() + "reset-password" });
+    setLoading(false);
+    setMessage(error ? error.message : "A reset link has been sent. Open it on this device.");
   }
 
   return (
@@ -92,27 +98,16 @@ export default function AuthScreen() {
       <Card variant="tint">
         <Text variant="eyebrow">Your private archive</Text>
         <Text variant="heading">Come back to your thread</Text>
-        <Input
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          placeholder="Email"
-          accessibilityLabel="Email"
-        />
-        <Input
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Password"
-          secureTextEntry
-          accessibilityLabel="Password"
-        />
-        <Button label="Sign in" icon="arrow-forward" onPress={() => authenticate("login")} disabled={loading} />
-        <Button label="Create a private archive" icon="person-add-outline" variant="secondary" onPress={() => authenticate("register")} disabled={loading} />
-        <Button label="I forgot my password" icon="mail-outline" variant="ghost" compact onPress={resetPassword} />
+        <Button label={loading ? "Opening Google..." : "Continue with Google"} icon="logo-google" onPress={() => void signInWithGoogle()} disabled={loading} />
+        <Input value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" placeholder="Email" accessibilityLabel="Email" />
+        <Input value={password} onChangeText={setPassword} placeholder="Password" secureTextEntry autoComplete="current-password" accessibilityLabel="Password" />
+        <Button label={loading ? "Signing in..." : "Sign in"} icon="arrow-forward" onPress={() => void authenticate("login")} disabled={loading} />
+        <Button label="Create a private archive" icon="person-add-outline" variant="secondary" onPress={() => void authenticate("register")} disabled={loading} />
+        <Button label="I forgot my password" icon="mail-outline" variant="ghost" compact onPress={() => void resetPassword()} disabled={loading} />
+        {!!message && <Text accessibilityRole="alert" style={styles.message}>{message}</Text>}
       </Card>
       <Text variant="caption">
-        Without Supabase keys, Continue opens a device-only preview. Reasoning and account sync require a configured, signed-in account.
+        Email confirmation and Google both return to this site. A successful sign-in continues automatically.
       </Text>
     </Screen>
   );
@@ -120,5 +115,6 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   hero: { gap: 12, paddingTop: 16, marginBottom: 10 },
-  lede: { color: palette.muted, fontSize: 17, lineHeight: 25, maxWidth: 480 }
+  lede: { color: palette.muted, fontSize: 17, lineHeight: 25, maxWidth: 480 },
+  message: { color: palette.clay, lineHeight: 22 },
 });

@@ -4,8 +4,8 @@ import type { User } from "@supabase/supabase-js";
 import { ActivityEntry, CheckInSession, UserPreferences } from "@/types/activity";
 import { exportData, loadActivities, loadPreferences, loadSessions, saveActivities, savePreferences, saveSessions } from "@/services/localStore";
 import { loadDailyCheckIns, persistDailyCheckIn, syncDailyCheckIns } from "@/services/dailyCheckIns";
+import { completeAuthCallback } from "@/services/authCallback";
 import { supabase } from "@/services/supabase";
-import { agentDebug } from "@/lib/agentDebug";
 
 type AppStateValue = {
   user: User | null;
@@ -13,6 +13,7 @@ type AppStateValue = {
   sessions: CheckInSession[];
   preferences?: UserPreferences;
   ready: boolean;
+  accountRecovery: boolean;
   storageError: string;
   upsertActivities: (entries: ActivityEntry[]) => Promise<void>;
   updateActivity: (entry: ActivityEntry) => Promise<void>;
@@ -35,9 +36,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [dailySessions, setDailySessions] = useState<CheckInSession[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>();
   const [ready, setReady] = useState(false);
+  const [accountRecovery, setAccountRecovery] = useState(false);
   const [storageError, setStorageError] = useState("");
   const reload = useCallback(async () => {
     setStorageError("");
+    const callback = await completeAuthCallback();
     const [auth, entries, sessions, prefs, daily] = await Promise.all([
       supabase?.auth.getSession(),
       loadActivities(),
@@ -45,10 +48,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       loadPreferences(),
       loadDailyCheckIns(),
     ]);
-    // #region agent log
-    agentDebug({ hypothesisId: "C/D", location: "AppState.tsx:reload", message: "Application auth hydration settled", data: { hasAuthResult: Boolean(auth), hasAuthError: Boolean(auth?.error), hasSession: Boolean(auth?.data.session) } });
-    // #endregion
     if (auth?.error) throw auth.error;
+    setAccountRecovery(callback.recovery);
     setUser(auth?.data.session?.user ?? null);
     setActivities(entries);
     setSessions(sessions);
@@ -65,15 +66,15 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       setReady(false);
       setDailySessions([]);
       void reload()
-        .catch(() => {
-          if (active && current === generation) setStorageError("Could not load your private data. Reload to try again.");
+        .catch((error) => {
+          if (active && current === generation) {
+            setStorageError(error instanceof Error ? error.message : "Could not load your private data. Reload to try again.");
+            setReady(true);
+          }
         });
     };
     refresh();
-    const subscription = supabase?.auth.onAuthStateChange((event) => {
-      // #region agent log
-      agentDebug({ hypothesisId: "C", location: "AppState.tsx:onAuthStateChange", message: "Supabase auth state event received", data: { event } });
-      // #endregion
+    const subscription = supabase?.auth.onAuthStateChange(() => {
       setTimeout(refresh, 0);
     });
     return () => { active = false; generation++; subscription?.data.subscription.unsubscribe(); };
@@ -83,7 +84,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     const dailyEntries = dailySessions.flatMap(s => s.entries);
     const activities = [...legacyActivities.filter(a => !dailyEntries.some(d => d.id === a.id)), ...dailyEntries];
     return {
-      user, activities, sessions: [...legacySessions, ...dailySessions], preferences, ready, storageError,
+      user, activities, sessions: [...legacySessions, ...dailySessions], preferences, ready, accountRecovery, storageError,
       async upsertActivities(entries) {
         const next = [...legacyActivities.filter(entry => !entries.some(item => item.id === entry.id)), ...entries];
         await saveActivities(next); setActivities(next);
@@ -150,7 +151,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         if (signOutError) throw signOutError;
       },
     };
-  }, [user, legacyActivities, legacySessions, dailySessions, preferences, ready, storageError]);
+  }, [user, legacyActivities, legacySessions, dailySessions, preferences, ready, accountRecovery, storageError]);
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }
 export function useAppState() {
