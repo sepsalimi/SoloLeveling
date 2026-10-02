@@ -12,19 +12,17 @@ import { TaskPie } from "@/components/TaskPie";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
 import { addDays, isoDate } from "@/lib/dates";
-import { completeTaskOccurrence, expandOccurrences, occurrenceId, taskOccursOn } from "@/lib/recurrence";
+import { completeTaskOccurrence, expandOccurrences } from "@/lib/recurrence";
+import { planShortcuts, PlanView, tasksForView } from "@/lib/taskViews";
 import { loadLifePlan, saveLifePlan, syncLifePlan } from "@/services/taskStore";
 import { emptyLifePlan, lifeAreas, LifePlan, LifeTask, Project } from "@/types/life";
 import { palette, surfaces } from "@/theme/colors";
-
-const shortcuts = ["Inbox", "Today", "Tomorrow", "Next 7 Days", "Completed"] as const;
-type Shortcut = (typeof shortcuts)[number] | `project:${string}`;
 
 export default function TasksScreen() {
   const dark = useColorScheme() === "dark";
   const theme = surfaces(dark);
   const [plan, setPlan] = useState<LifePlan>(emptyLifePlan());
-  const [view, setView] = useState<Shortcut>("Today");
+  const [view, setView] = useState<PlanView>("Open");
   const [editing, setEditing] = useState<LifeTask>();
   const [message, setMessage] = useState("");
   const [ready, setReady] = useState(false);
@@ -57,19 +55,7 @@ export default function TasksScreen() {
     setMessage(status === "synced" ? "Plan saved and synced." : status === "pending" ? "Plan saved here. Account sync is pending." : "Plan saved on this device.");
   }
 
-  const visible = useMemo(() => plan.tasks.filter((task) => {
-    const doneToday = plan.occurrences.find((item) => item.id === occurrenceId(task.id, today))?.status === "done";
-    if (view === "Completed") return task.status === "Done" || plan.occurrences.some((item) => item.taskId === task.id && item.status === "done");
-    if (task.status === "Done") return false;
-    if (view === "Inbox") return !task.projectId && !task.dueDate && !task.recurrence;
-    if (view === "Today") return !doneToday && (task.dueDate === today || taskOccursOn(task, today));
-    if (view === "Tomorrow") return task.dueDate === tomorrow || taskOccursOn(task, tomorrow);
-    if (view === "Next 7 Days") {
-      return Boolean((task.dueDate && task.dueDate >= today && task.dueDate <= weekEnd)
-        || plan.occurrences.some((item) => item.taskId === task.id && item.scheduledFor >= today && item.scheduledFor <= weekEnd && item.status === "pending"));
-    }
-    return task.projectId === view.slice("project:".length);
-  }), [plan, today, tomorrow, view, weekEnd]);
+  const visible = useMemo(() => tasksForView(plan, view, today, tomorrow, weekEnd), [plan, today, tomorrow, view, weekEnd]);
 
   async function complete(task: LifeTask) {
     const date = view === "Tomorrow" ? tomorrow : today;
@@ -94,11 +80,11 @@ export default function TasksScreen() {
         <Text style={{ color: theme.softText }}>Speak naturally. Goals, projects, recurring work, and next actions stay connected.</Text>
       </View>
 
-      <LifeCapture plan={plan} onPlan={(next) => setPlan(expandOccurrences(next, today, isoDate(addDays(new Date(), 31))))} />
+      <LifeCapture plan={plan} onPlan={(next) => { setView("Open"); setPlan(expandOccurrences(next, today, isoDate(addDays(new Date(), 31)))); }} />
       {!!message && <Text accessibilityRole="alert">{message}</Text>}
 
       <View style={styles.shortcutRow}>
-        {shortcuts.map((item) => <Choice key={item} label={item} active={view === item} onPress={() => setView(item)} />)}
+        {planShortcuts.map((item) => <Choice key={item} label={item} active={view === item} onPress={() => setView(item)} />)}
       </View>
 
       {!!plan.goals.length && (
@@ -159,7 +145,7 @@ export default function TasksScreen() {
       )}
 
       {!ready && <Text>Loading your plan...</Text>}
-      {ready && !visible.length && <Card><Text>No tasks in this view. Try Inbox or tell the planner what needs doing.</Text></Card>}
+      {ready && !visible.length && <Card><Text>{view === "Open" ? "No open tasks yet. Speak or type what needs doing, then organize and save." : "Nothing in this view. Open shows every task that is not done."}</Text></Card>}
       {visible.map((task) => {
         const project = plan.projects.find((item) => item.id === task.projectId);
         const completedOccurrence = plan.occurrences
