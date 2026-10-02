@@ -22,9 +22,10 @@ jobs:
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || { echo "The SUPABASE repository secret is missing."; exit 1; }
           test -n "$SUPABASE_PROJECT_REF" || { echo "The SUPABASE_PROJECT_REF repository variable is missing."; exit 1; }
-          response=$(curl --fail-with-body -sS -X PATCH \
+          response=$(curl -sS -w '\nHTTP_STATUS:%{http_code}\n' -X PATCH \
             "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/config/auth" \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{"site_url":"https://sepsalimi.github.io/SoloLeveling/","uri_allow_list":"https://sepsalimi.github.io/SoloLeveling/**","mailer_autoconfirm":true,"mailer_allow_unverified_email_sign_ins":true}')
-          printf '%s' "$response" | python3 -c 'import json,sys; data=json.load(sys.stdin); print({key: data.get(key) for key in ["mailer_autoconfirm","mailer_allow_unverified_email_sign_ins","site_url","uri_allow_list"]})'
+          printf '%s\n' "$response" | python3 -c 'import sys; text=sys.stdin.read(); status=text.rsplit("HTTP_STATUS:",1)[-1].strip(); body=text.rsplit("HTTP_STATUS:",1)[0]; print(status); print(body[:500].replace("sbp_", "sbp_redacted"))'
+          test "${response##*HTTP_STATUS:}" = "200"
