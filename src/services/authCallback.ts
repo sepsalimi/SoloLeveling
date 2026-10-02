@@ -16,6 +16,12 @@ export async function completeAuthCallback() {
   const href = Platform.OS === "web" ? window.location.href : await Linking.getInitialURL();
   if (!href) return { recovery: false };
   const callback = authCallbackFromUrl(href);
+  const otpTypes = new Set(["signup", "invite", "magiclink", "recovery", "email_change", "email"]);
+  if (callback.tokenHash && callback.otpType && otpTypes.has(callback.otpType)) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: callback.tokenHash, type: callback.otpType as "signup" });
+    if (error) throw error;
+    return { recovery: callback.recovery };
+  }
   if (callback.code) {
     if (consumedCodes.has(callback.code)) return { recovery: false };
     consumedCodes.add(callback.code);

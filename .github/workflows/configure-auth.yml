@@ -3,10 +3,6 @@ name: Configure sign-in
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/configure-auth.yml
 
 permissions:
   contents: read

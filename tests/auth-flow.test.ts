@@ -24,5 +24,6 @@ it("recognizes a Google or email callback without treating an ordinary visit as 
   const callback = authCallbackFromUrl("https://sepsalimi.github.io/SoloLeveling/?code=abc");
   expect(callback).toMatchObject({ code: "abc", recovery: false });
   expect(authCallbackFromUrl("https://sepsalimi.github.io/SoloLeveling/reset-password?code=abc").recovery).toBe(true);
+  expect(authCallbackFromUrl("https://sepsalimi.github.io/SoloLeveling/?token_hash=hash&type=signup")).toMatchObject({ tokenHash: "hash", otpType: "signup" });
   expect(authCallbackFromUrl("https://sepsalimi.github.io/SoloLeveling/").recovery).toBe(false);
 });

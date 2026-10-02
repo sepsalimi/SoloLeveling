@@ -11,15 +11,18 @@ export function authCallbackFromUrl(href: string) {
   const url = new URL(href);
   const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
   const code = url.searchParams.get("code");
+  const tokenHash = url.searchParams.get("token_hash");
   const accessToken = hash.get("access_token");
   const refreshToken = hash.get("refresh_token");
   const type = url.searchParams.get("type") ?? hash.get("type");
   const recovery = type === "recovery" || url.pathname.includes("reset-password");
   return {
     code,
+    tokenHash,
+    otpType: type,
     accessToken,
     refreshToken,
-    recovery: recovery && Boolean(code || (accessToken && refreshToken)),
+    recovery: recovery && Boolean(code || tokenHash || (accessToken && refreshToken)),
   };
 }
 

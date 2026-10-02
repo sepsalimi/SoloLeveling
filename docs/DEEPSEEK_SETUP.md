@@ -36,7 +36,7 @@ https://sepsalimi.github.io/SoloLeveling/
 https://sepsalimi.github.io/SoloLeveling/reset-password
 ```
 
-Email sign-in does not require a confirmation message. Run `Configure sign-in` if a project still rejects an unconfirmed address. Google remains unavailable until its provider is enabled with a Google client ID and secret; the app checks that before leaving the page.
+The current Supabase token cannot change Auth settings. In the Supabase dashboard, open Authentication, then Email, and turn off Confirm email. That lets the existing account sign in. Google stays on the sign-in page until Authentication, then Google, has a client ID and secret.
 
 ## Deployment
 

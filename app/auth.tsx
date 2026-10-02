@@ -47,8 +47,15 @@ export default function AuthScreen() {
               data: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
             },
           });
-      if (response.error) setMessage(response.error.message);
-      else if (!response.data.session) setMessage("Check your email and confirm the address, then come back and sign in.");
+      if (response.error?.message.toLowerCase().includes("email not confirmed")) {
+        const resend = await supabase.auth.resend({
+          type: "signup",
+          email: email.trim(),
+          options: { emailRedirectTo: currentAuthReturnUrl() },
+        });
+        setMessage(resend.error?.message || "This email is not confirmed yet. I sent a new link. Open it on this phone, then sign in again.");
+      } else if (response.error) setMessage(response.error.message);
+      else if (!response.data.session) setMessage("Check your email and open the confirmation link, then sign in.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Sign-in did not finish. Please try again.");
     } finally {
