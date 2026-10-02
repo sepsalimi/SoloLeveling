@@ -1,4 +1,4 @@
-// Email and Google sign-in. A successful session leaves this screen only after app state has it.
+// Email sign-in first, with Google below it. Google is checked before the browser leaves this page.
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
@@ -7,7 +7,7 @@ import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { useAppState } from "@/context/AppState";
-import { supabase } from "@/services/supabase";
+import { supabase, supabaseAnonKey, supabaseUrl } from "@/services/supabase";
 import { currentAuthReturnUrl } from "@/services/authCallback";
 import { Input } from "@/components/Input";
 import { BrandMark } from "@/components/BrandMark";
@@ -57,18 +57,31 @@ export default function AuthScreen() {
   }
 
   async function signInWithGoogle() {
-    if (!supabase) {
+    if (!supabase || !supabaseUrl || !supabaseAnonKey) {
       router.replace("/onboarding");
       return;
     }
     setLoading(true);
     setMessage("");
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: currentAuthReturnUrl(), queryParams: { prompt: "select_account" } },
-    });
-    if (error) {
-      setMessage(error.message.includes("provider") ? "Google sign-in is not enabled for this project yet." : error.message);
+    try {
+      const settingsResponse = await fetch(supabaseUrl + "/auth/v1/settings", {
+        headers: { apikey: supabaseAnonKey, Authorization: "Bearer " + supabaseAnonKey },
+      });
+      if (!settingsResponse.ok) throw new Error("Could not reach Google sign-in.");
+      const settings = await settingsResponse.json();
+      if (!settings.external?.google) {
+        setMessage("Google sign-in is not turned on yet. Use email for now.");
+        return;
+      }
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: currentAuthReturnUrl(), skipBrowserRedirect: true, queryParams: { prompt: "select_account" } },
+      });
+      if (error || !data.url) throw new Error(error?.message || "Google sign-in did not start.");
+      if (typeof window === "undefined") throw new Error("Google sign-in is available in the browser.");
+      window.location.assign(data.url);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Google sign-in did not start.");
       setLoading(false);
     }
   }
@@ -98,16 +111,17 @@ export default function AuthScreen() {
       <Card variant="tint">
         <Text variant="eyebrow">Your private archive</Text>
         <Text variant="heading">Come back to your thread</Text>
-        <Button label={loading ? "Opening Google..." : "Continue with Google"} icon="logo-google" onPress={() => void signInWithGoogle()} disabled={loading} />
         <Input value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" placeholder="Email" accessibilityLabel="Email" />
         <Input value={password} onChangeText={setPassword} placeholder="Password" secureTextEntry autoComplete="current-password" accessibilityLabel="Password" />
         <Button label={loading ? "Signing in..." : "Sign in"} icon="arrow-forward" onPress={() => void authenticate("login")} disabled={loading} />
         <Button label="Create a private archive" icon="person-add-outline" variant="secondary" onPress={() => void authenticate("register")} disabled={loading} />
         <Button label="I forgot my password" icon="mail-outline" variant="ghost" compact onPress={() => void resetPassword()} disabled={loading} />
+        <Text variant="caption" style={styles.or}>or</Text>
+        <Button label={loading ? "Opening Google..." : "Continue with Google"} icon="logo-google" variant="secondary" onPress={() => void signInWithGoogle()} disabled={loading} />
         {!!message && <Text accessibilityRole="alert" style={styles.message}>{message}</Text>}
       </Card>
       <Text variant="caption">
-        Email confirmation and Google both return to this site. A successful sign-in continues automatically.
+        A successful sign-in continues automatically. Google stays on this page until the provider is turned on.
       </Text>
     </Screen>
   );
@@ -116,5 +130,6 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   hero: { gap: 12, paddingTop: 16, marginBottom: 10 },
   lede: { color: palette.muted, fontSize: 17, lineHeight: 25, maxWidth: 480 },
+  or: { textAlign: "center", marginTop: 4 },
   message: { color: palette.clay, lineHeight: 22 },
 });

@@ -36,7 +36,7 @@ https://sepsalimi.github.io/SoloLeveling/
 https://sepsalimi.github.io/SoloLeveling/reset-password
 ```
 
-Google sign-in also needs the Google provider enabled in Supabase Authentication, with that same Pages URL as an authorized redirect. The app shows the provider error on the sign-in screen when it is not enabled.
+Email sign-in does not require a confirmation message. Run `Configure sign-in` if a project still rejects an unconfirmed address. Google remains unavailable until its provider is enabled with a Google client ID and secret; the app checks that before leaving the page.
 
 ## Deployment
 

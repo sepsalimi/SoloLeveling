@@ -1,4 +1,5 @@
-// Covers the sign-in redirect race, Google return URL, and recovery routing.
+// Covers the sign-in redirect race, Google return URL, recovery routing, and button order.
+import { readFileSync } from "node:fs";
 import { authCallbackFromUrl, authReturnUrl, startupDestination } from "../src/lib/authFlow";
 
 it("keeps the GitHub Pages prefix in the provider return URL", () => {
@@ -11,6 +12,12 @@ it("routes a signed-in user onward instead of back to login", () => {
     .toBe("/onboarding");
   expect(startupDestination({ configured: true, signedIn: false, onboardingCompleted: false, accountRecovery: false }))
     .toBe("/auth");
+});
+
+it("places Google after the email actions", () => {
+  const screen = readFileSync("app/auth.tsx", "utf8");
+  expect(screen.indexOf("Sign in")).toBeLessThan(screen.indexOf("Continue with Google"));
+  expect(screen).toContain("Google sign-in is not turned on yet. Use email for now.");
 });
 
 it("recognizes a Google or email callback without treating an ordinary visit as recovery", () => {

@@ -1,0 +1,26 @@
+# Lets the owner sign in without a confirmation email and allows the Pages redirect.
+name: Configure sign-in
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Allow email sign-in without confirmation
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "The SUPABASE repository secret is missing."; exit 1; }
+          test -n "$SUPABASE_PROJECT_REF" || { echo "The SUPABASE_PROJECT_REF repository variable is missing."; exit 1; }
+          response=$(curl --fail-with-body -sS -X PATCH \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"site_url":"https://sepsalimi.github.io/SoloLeveling/","uri_allow_list":"https://sepsalimi.github.io/SoloLeveling/**","mailer_autoconfirm":true,"mailer_allow_unverified_email_sign_ins":true}')
+          printf '%s' "$response" | python3 -c 'import json,sys; data=json.load(sys.stdin); print({key: data.get(key) for key in ["mailer_autoconfirm","mailer_allow_unverified_email_sign_ins","site_url","uri_allow_list"]})'
