@@ -9,7 +9,10 @@ Set these Supabase Edge Function secrets:
 ```bash
 supabase secrets set DEEPSEEK_API_KEY=<provider-key>
 supabase secrets set DEEPSEEK_MODEL=deepseek-v4-flash
+supabase secrets set OPENAI_API_KEY=<provider-key>
 ```
+
+`OPENAI_API_KEY` is required for voice. `transcribe-note` sends one finished recording to `gpt-transcribe`. `OPENAI_TRANSCRIPTION_MODEL` can override that model name.
 
 `DEEPSEEK_MODEL` is optional. The September 2026 official API documents `deepseek-v4-flash` and `deepseek-v4-pro`; legacy `deepseek-chat` and `deepseek-reasoner` names are retired. The functions use Chat Completions with:
 
@@ -44,8 +47,9 @@ Run the `Deploy DeepSeek reasoning backend` workflow. It deploys:
 
 - `reason-life`: conversational goals/projects/tasks
 - `reason-check-in`: dated actual activities and task progress
+- `transcribe-note`: one-shot speech transcription for Plan and Check-in
 
-Both use `--no-verify-jwt` at the gateway because the function performs explicit user validation against `/auth/v1/user`.
+Each function uses `--no-verify-jwt` at the gateway because it validates the user against `/auth/v1/user`.
 
 The workflow does not apply SQL. Review and apply migrations separately.
 

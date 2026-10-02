@@ -28,7 +28,8 @@ Deno.serve(async (req) => {
 
     const upstream = new FormData();
     upstream.set("file", file, file.name || "check-in.m4a");
-    upstream.set("model", Deno.env.get("OPENAI_TRANSCRIPTION_MODEL") ?? "gpt-4o-mini-transcribe");
+    upstream.set("model", Deno.env.get("OPENAI_TRANSCRIPTION_MODEL") ?? "gpt-transcribe");
+    upstream.set("prompt", "A personal planning note about goals, projects, tasks, deadlines, and how long things take.");
 
     const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
     });
 
     if (!response.ok) {
-      throw new Error("The transcription provider rejected the recording.");
+      throw new Error(`The transcription provider rejected the recording (${response.status}).`);
     }
 
     const data = await response.json();

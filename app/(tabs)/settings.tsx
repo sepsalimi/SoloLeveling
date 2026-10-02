@@ -72,7 +72,7 @@ export default function SettingsScreen() {
       <Card variant="ink">
         <Text variant="heading" style={styles.inverse}>Privacy</Text>
         <Text style={styles.inverseBody}>
-          Reasoning runs through authenticated Supabase functions. Browser dictation uses the browser speech service. Model keys never enter the app, and anonymous device records are not attached to a later account.
+          Reasoning runs through authenticated Supabase functions. Voice is recorded until you stop, then transcribed once. Model keys never enter the app, and anonymous device records are not attached to a later account.
         </Text>
       </Card>
       <View style={styles.dataActions}>

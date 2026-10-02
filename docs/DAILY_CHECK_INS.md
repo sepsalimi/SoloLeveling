@@ -9,10 +9,11 @@ Native builds can schedule silent local notifications on selected weekdays. Noti
 ## Evening or anytime
 
 - Tap the microphone once to start and again to stop.
-- Browser recognition never reopens itself, avoiding browser/OS restart tones. If the service ends a session, captured words remain and the user can tap to continue.
+- Web and native both keep a single recording open until that stop. The audio is sent once to `transcribe-note`, which uses OpenAI `gpt-transcribe`.
+- The transcript is inserted once. Browser speech guesses are not appended, and a paused recognizer cannot submit an empty take.
 - Silence and timers never submit.
-- Only explicit Stop sends the completed turn to reasoning.
-- Backgrounding, permission loss, or persistent speech-service failure stops capture and explains the interruption.
+- Only explicit Stop transcribes the take and sends that turn to reasoning.
+- Backgrounding or permission loss stops the microphone, discards that take, and explains the interruption.
 - Finalized words, original capture timestamp, timezone, and date anchor survive reload and retry.
 - Native recordings use Expo Audio and are deleted from temporary storage after transcription or cancellation.
 
