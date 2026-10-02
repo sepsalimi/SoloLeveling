@@ -4,6 +4,7 @@ import { AccessibilityInfo, Animated, StyleSheet, useColorScheme, View } from "r
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Text } from "@/components/Text";
+import { shortDate } from "@/lib/dates";
 import { taskType } from "@/lib/tasks";
 import { LifeTask, Project } from "@/types/life";
 import { palette, surfaces } from "@/theme/colors";
@@ -65,21 +66,15 @@ export function CompletableTaskCard({ task, project, completedOn, onComplete, on
           borderColor: palette.coral,
         }}
       >
-        <View style={styles.title}>
-          <View style={styles.grow}>
-            <Text variant="heading">{task.title}</Text>
-            <Text variant="caption">
-              {task.category} · {task.priority} · {task.estimatedHours == null ? "estimate pending" : `${task.estimatedHours} h planned`}
-            </Text>
-          </View>
-          <Text variant="caption">{taskType(task.priority, task.estimatedHours)}</Text>
+        <Text variant="heading">{task.title}</Text>
+        <View style={styles.fields}>
+          <Field label="Status" value={task.status} tone={task.status === "In Progress" ? "progress" : task.status === "Done" ? "done" : "plain"} />
+          <Field label="Due" value={dueLabel(task, completedOn)} />
+          <Field label="Priority" value={capitalize(task.priority)} tone={task.priority === "high" ? "high" : task.priority === "medium" ? "medium" : "low"} />
+          <Field label="Est. Hrs" value={task.estimatedHours == null ? "—" : String(task.estimatedHours)} />
+          <Field label="Task Type" value={taskType(task.priority, task.estimatedHours)} />
+          <Field label="Project" value={project?.title ?? "—"} />
         </View>
-        <Text variant="caption">
-          {project ? `${project.title} · ` : ""}
-          {task.dueDate ? `Due ${task.dueDate}` : "No hard deadline"}
-          {task.recurrence ? ` · ${task.recurrence.frequency}` : ""}
-          {completedOn ? ` · completed ${completedOn}` : ""}
-        </Text>
         <View style={styles.actions}>
           {onComplete && (
             <Button
@@ -97,8 +92,39 @@ export function CompletableTaskCard({ task, project, completedOn, onComplete, on
   );
 }
 
+function dueLabel(task: LifeTask, completedOn?: string) {
+  const due = task.dueDate ? shortDate(task.dueDate) : "None";
+  const repeat = task.recurrence ? ` · ${task.recurrence.frequency}` : "";
+  const completed = completedOn ? ` · done ${shortDate(completedOn)}` : "";
+  return `${due}${repeat}${completed}`;
+}
+
+function capitalize(value: string) {
+  return value.slice(0, 1).toUpperCase() + value.slice(1);
+}
+
+function Field({ label, value, tone = "plain" }: { label: string; value: string; tone?: "plain" | "progress" | "done" | "high" | "medium" | "low" }) {
+  const dark = useColorScheme() === "dark";
+  const theme = surfaces(dark);
+  const toneStyle = {
+    plain: { backgroundColor: theme.chip, color: theme.ink },
+    progress: { backgroundColor: "#F3D48A", color: "#3D2C08" },
+    done: { backgroundColor: palette.mint, color: "#12302C" },
+    high: { backgroundColor: "#F3B4AE", color: "#4A1C16" },
+    medium: { backgroundColor: "#E7C0D8", color: "#3D2033" },
+    low: { backgroundColor: "#D7E3C8", color: "#243018" },
+  }[tone];
+  return (
+    <View style={styles.field}>
+      <Text variant="caption">{label}</Text>
+      <Text variant="label" numberOfLines={2} style={[styles.value, { backgroundColor: toneStyle.backgroundColor, color: toneStyle.color }]}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  title: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
-  grow: { flex: 1, gap: 5 },
+  fields: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  field: { width: "31%", minWidth: 96, gap: 4 },
+  value: { alignSelf: "flex-start", overflow: "hidden", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

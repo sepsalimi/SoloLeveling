@@ -27,8 +27,8 @@ The deterministic task bucket formula remains in `src/lib/tasks.ts`; the model n
 
 ## Check-in pipeline
 
-1. `src/components/TaskVoice.tsx` uses browser SpeechRecognition on web and Expo Audio on native.
-2. Browser recognition restarts after service session endings. Silence does not submit. Background, permission, or connection interruption stops capture and preserves finalized text.
+1. `src/components/TaskVoice.tsx` records with the browser `MediaRecorder` on web and Expo Audio on native. Explicit stop uploads that one file to `transcribe-note`.
+2. `gpt-transcribe` returns one transcript. Silence does not submit. Background or permission loss stops the microphone and discards the unfinished take.
 3. `src/services/checkInDraft.ts` stores the transcript, capture timestamp, local date, timezone, session identity, and clarification question under the active account/device scope.
 4. `reason-check-in` resolves corrections and relative dates, excludes negative/future reports, retains untimed events, and checks plausibility per actual date.
 5. The client validates returned dates and linked identifiers before `src/lib/automaticCheckIn.ts` creates stable activity IDs.
@@ -65,5 +65,5 @@ Planned task hours appear only in the planner chart.
 The product source is `main`.
 
 - `pages.yml` checks out `main`, runs typecheck/tests/export, prepares route shells, and publishes GitHub Pages.
-- `deploy-reasoning.yml` checks out `main` and deploys `reason-check-in` plus `reason-life`.
+- `deploy-reasoning.yml` checks out `main` and deploys `reason-check-in`, `reason-life`, and `transcribe-note`.
 - SQL migrations are reviewed and applied separately; function deployment never mutates the database.

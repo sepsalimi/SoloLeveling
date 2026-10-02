@@ -20,8 +20,10 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      # The function validates the user JWT against /auth/v1/user itself.
+      # Each function validates the user JWT against /auth/v1/user itself.
+      # transcribe-note also needs the OPENAI_API_KEY edge secret.
       - name: Deploy authenticated reasoning functions
         run: |
           supabase functions deploy reason-check-in --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
           supabase functions deploy reason-life --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
+          supabase functions deploy transcribe-note --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
